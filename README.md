@@ -1,6 +1,5 @@
 # Календарь звонков
 
-
 [![hexlet-check](https://github.com/JuliaGrishaeva87/frontend-project-386/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/JuliaGrishaeva87/frontend-project-386/actions)
 
 Разработайте совместно с ИИ сервис для бронирования календаря
