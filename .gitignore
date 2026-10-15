@@ -1,6 +1,9 @@
 node_modules/
 dist/
 coverage/
+.agents/
+agent/
+.claude/
 *.log
 .env
 .env.*
