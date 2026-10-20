@@ -56,12 +56,11 @@ export function createMockApiClient(): ApiClient {
           const open = toUtcMs(day, window.start);
           const close = toUtcMs(day, window.end);
           for (let s = open; s + durationMs <= close; s += durationMs) {
-            if (s < rangeStart || s + durationMs > rangeEnd) continue;
-            const startIso = new Date(s).toISOString();
-            if (bookings.some((b) => b.eventTypeId === eventTypeId && b.start === startIso)) {
-              continue;
-            }
-            slots.push({ start: startIso, end: new Date(s + durationMs).toISOString() });
+            const e = s + durationMs;
+            if (s < rangeStart || e > rangeEnd) continue;
+            // A slot is free only if it overlaps no existing booking (any event type).
+            if (bookings.some((b) => s < Date.parse(b.end) && Date.parse(b.start) < e)) continue;
+            slots.push({ start: new Date(s).toISOString(), end: new Date(e).toISOString() });
           }
         }
       }
