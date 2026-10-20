@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { ApiClient } from '../../src/api/client';
+import type { ApiClient } from '../../src/api/types';
 import type { EventType, Slot } from '../../src/api/types';
 
 export const someEventTypes: EventType[] = [

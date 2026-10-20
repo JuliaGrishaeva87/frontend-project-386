@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Booking, EventType, Slot } from '../api/types';
-import type { ApiClient } from '../api/client';
-import { mockApiClient } from '../api/client';
+import type { ApiClient, Booking, EventType, Slot } from '../api/types';
+import { defaultApiClient } from '../api/defaultApiClient';
 import { groupSlotsByDate } from '../utils/groupSlotsByDate';
 
 type Props = {
   api?: ApiClient;
 };
 
-export default function BookingPage({ api = mockApiClient }: Props) {
+export default function BookingPage({ api = defaultApiClient }: Props) {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);

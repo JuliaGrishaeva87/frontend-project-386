@@ -31,3 +31,16 @@ export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 export const WEEKDAYS: Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export type WeeklyAvailability = Partial<Record<Weekday, TimeRange[]>>;
+
+export interface ApiClient {
+  getEventTypes(): Promise<EventType[]>;
+  getSlots(params: { eventTypeId: string; from: string; to: string }): Promise<Slot[]>;
+  createBooking(draft: BookingDraft): Promise<Booking>;
+  getAvailability(): Promise<WeeklyAvailability>;
+  putAvailability(availability: WeeklyAvailability): Promise<WeeklyAvailability>;
+  createEventType(et: Pick<EventType, 'name' | 'durationMinutes'>): Promise<EventType>;
+}
+
+export function resolveApiClient(client: ApiClient | undefined, fallback: ApiClient): ApiClient {
+  return client ?? fallback;
+}

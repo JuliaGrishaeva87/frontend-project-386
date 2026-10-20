@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import BookingPage from '../src/pages/BookingPage';
-import type { ApiClient } from '../src/api/client';
+import type { ApiClient } from '../src/api/types';
 import { buildFakeApi } from './helpers/fakeApi';
 
 const createFakeApi = (): ApiClient => buildFakeApi();

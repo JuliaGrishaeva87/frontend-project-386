@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import type { EventType } from '../api/types';
-import type { ApiClient } from '../api/client';
-import { mockApiClient } from '../api/client';
+import type { ApiClient, EventType } from '../api/types';
+import { defaultApiClient } from '../api/defaultApiClient';
 
 type Props = {
   api?: ApiClient;
 };
 
-export default function HostEventTypesPage({ api = mockApiClient }: Props) {
+export default function HostEventTypesPage({ api = defaultApiClient }: Props) {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [name, setName] = useState('');
   const [duration, setDuration] = useState(30);

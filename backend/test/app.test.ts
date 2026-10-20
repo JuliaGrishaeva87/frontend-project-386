@@ -20,8 +20,8 @@ describe('backend smoke test', () => {
     await app.close();
   });
 
-  it('starts the server and responds with 200 on GET /', async () => {
-    const response = await fetch(`${baseUrl}/`);
+  it('starts the server and responds with 200 on GET /api/health', async () => {
+    const response = await fetch(`${baseUrl}/api/health`);
     expect(response.status).toBe(200);
 
     const body = (await response.json()) as { status: string };

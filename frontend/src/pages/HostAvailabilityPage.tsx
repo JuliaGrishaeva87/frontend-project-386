@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { WEEKDAYS } from '../api/types';
-import type { TimeRange, Weekday, WeeklyAvailability } from '../api/types';
-import type { ApiClient } from '../api/client';
-import { mockApiClient } from '../api/client';
+import type { ApiClient, TimeRange, Weekday, WeeklyAvailability } from '../api/types';
+import { defaultApiClient } from '../api/defaultApiClient';
 
 type Props = {
   api?: ApiClient;
 };
 
-export default function HostAvailabilityPage({ api = mockApiClient }: Props) {
+export default function HostAvailabilityPage({ api = defaultApiClient }: Props) {
   const [availability, setAvailability] = useState<WeeklyAvailability>({});
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');

@@ -1,4 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import fastifyStatic from '@fastify/static';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { InMemoryRepository, type Repository } from './repository.js';
 import { deriveSlots } from './slots.js';
 import { WEEKDAYS } from './types.js';
@@ -7,12 +10,14 @@ import type { TimeRange, Weekday, WeeklyAvailability } from './types.js';
 type BuildAppOptions = {
   repo?: Repository;
   now?: () => number;
+  staticRoot?: string;
 };
 
 const HHMM = /^\d{2}:\d{2}$/;
 const EMAIL = /.+@.+\..+/;
 const DAY_MS = 86_400_000;
 const DEFAULT_HORIZON_MS = 14 * DAY_MS;
+const API_PREFIX = '/api';
 
 const error = (code: string, message: string) => ({ error: { code, message } });
 
@@ -31,10 +36,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const now = options.now ?? Date.now;
   const app = Fastify({ logger: true });
 
-  app.get('/', async () => ({ status: 'ok', service: 'call-scheduler-backend' }));
-
   app.register(
     async (api) => {
+      api.get('/health', async () => ({ status: 'ok', service: 'call-scheduler-backend' }));
+
       api.get('/event-types', async () => repo.listEventTypes());
 
       api.post('/event-types', async (req, reply) => {
@@ -167,8 +172,27 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
         return reply.code(201).send(booking);
       });
     },
-    { prefix: '/api' },
+    { prefix: API_PREFIX },
   );
+
+  // ADR-0005: one origin serves both the API and the built frontend. In tests there is
+  // usually no build output, so static serving is only wired when the directory exists.
+  const staticRoot = options.staticRoot ?? join(process.cwd(), 'public');
+  const staticEnabled = existsSync(staticRoot);
+  if (staticEnabled) {
+    app.register(fastifyStatic, { root: staticRoot });
+  }
+
+  // Unknown API routes always answer with the JSON error shape, whether or not the
+  // static frontend is present. Everything else falls back to the SPA (index.html) so
+  // client-side deep links resolve.
+  app.setNotFoundHandler((req, reply) => {
+    const isApi = req.url === API_PREFIX || req.url.startsWith(`${API_PREFIX}/`);
+    if (!isApi && staticEnabled) {
+      return reply.sendFile('index.html');
+    }
+    return reply.code(404).send(error('NOT_FOUND', 'route not found'));
+  });
 
   return app;
 }

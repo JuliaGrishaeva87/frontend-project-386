@@ -1,14 +1,6 @@
 import type { Booking, BookingDraft, EventType, Slot, Weekday, WeeklyAvailability } from './types';
+import type { ApiClient } from './types';
 import { WEEKDAYS } from './types';
-
-export interface ApiClient {
-  getEventTypes(): Promise<EventType[]>;
-  getSlots(params: { eventTypeId: string; from: string; to: string }): Promise<Slot[]>;
-  createBooking(draft: BookingDraft): Promise<Booking>;
-  getAvailability(): Promise<WeeklyAvailability>;
-  putAvailability(availability: WeeklyAvailability): Promise<WeeklyAvailability>;
-  createEventType(et: Pick<EventType, 'name' | 'durationMinutes'>): Promise<EventType>;
-}
 
 const defaultEventTypes: EventType[] = [
   { id: 'intro', name: 'Intro call', durationMinutes: 15 },

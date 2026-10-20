@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+.git
+.gitignore
+**/dist
+coverage
+*.log
+*.tsbuildinfo
+.env
+.env.*
+.agents
+agent
+.claude
+.github
+docs
+**/test
