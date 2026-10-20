@@ -1,6 +1,6 @@
 {
   "name": "frontend-project-386",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Call scheduling app (simplified Cal.com) — monorepo",
   "type": "module",
