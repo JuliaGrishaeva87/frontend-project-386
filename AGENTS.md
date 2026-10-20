@@ -24,4 +24,4 @@
 
 ### Domain docs
 
-Мульти-контекст: корневой `GLOSSARY-MAP.md` указывает на `backend/GLOSSARY.md` и `frontend/GLOSSARY.md`. См. `docs/agents/domain.md`.
+Единый домен: корневой `GLOSSARY.md` и `docs/adr/`. См. `docs/agents/domain.md`.

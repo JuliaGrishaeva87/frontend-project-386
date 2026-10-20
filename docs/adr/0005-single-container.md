@@ -1,0 +1,3 @@
+# One container: Fastify serves /api and the static frontend
+
+The whole app ships as a single Docker image: a multi-stage build compiles the frontend and the backend, and the final Fastify process serves both the API routes and the built static frontend from one origin on one port. All API routes carry an `/api` prefix so they can coexist with static assets under the same origin, which means no CORS configuration is needed; in development, Vite proxies `/api` to the backend. An alternative was a docker-compose setup with separate backend and frontend containers, but a single image matches "package the whole app in Docker" and is simpler.

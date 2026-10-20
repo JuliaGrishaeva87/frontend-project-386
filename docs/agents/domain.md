@@ -4,26 +4,21 @@ How the engineering skills should consume this repo's domain documentation when 
 
 ## Before exploring, read these
 
-- **`GLOSSARY.md`** at the repo root, or
-- **`GLOSSARY-MAP.md`** at the repo root if it exists: it points at one `GLOSSARY.md` per context. Read each one relevant to the topic.
-- **`docs/adr/`**: read ADRs that touch the area you're about to work in. In multi-context repos, also check `backend/docs/adr/` and `frontend/docs/adr/` for context-scoped decisions.
+- **`GLOSSARY.md`** at the repo root.
+- **`docs/adr/`**: read ADRs that touch the area you're about to work in.
 
 If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
 
 ## File structure
 
-This is a multi-context (monorepo) repo: a root `GLOSSARY-MAP.md` points at one `GLOSSARY.md` per context, and each context keeps its own decisions.
+Single-context repo: one `GLOSSARY.md` and one `docs/adr/` at the repo root. The `backend/` and `frontend/` workspaces are a deployment boundary, not a domain boundary, so they share one glossary.
 
 ```
 /
-├── GLOSSARY-MAP.md
-├── docs/adr/                          ← system-wide decisions
+├── GLOSSARY.md
+├── docs/adr/
 ├── backend/
-│   ├── GLOSSARY.md
-│   └── docs/adr/                      ← context-specific decisions
 └── frontend/
-    ├── GLOSSARY.md
-    └── docs/adr/
 ```
 
 ## Use the glossary's vocabulary
