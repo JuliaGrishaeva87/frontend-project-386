@@ -3,10 +3,8 @@ import { describe, expect, it } from 'vitest';
 import App from '../src/App';
 
 describe('App', () => {
-  it('renders the app heading', () => {
+  it('renders the booking page', async () => {
     render(<App />);
-    expect(
-      screen.getByRole('heading', { name: 'Get started' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Book a call')).toBeInTheDocument();
   });
 });
