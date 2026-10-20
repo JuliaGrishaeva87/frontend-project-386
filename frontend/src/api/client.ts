@@ -1,4 +1,5 @@
-import type { Booking, BookingDraft, EventType, Slot, WeeklyAvailability } from './types';
+import type { Booking, BookingDraft, EventType, Slot, Weekday, WeeklyAvailability } from './types';
+import { WEEKDAYS } from './types';
 
 export interface ApiClient {
   getEventTypes(): Promise<EventType[]>;
@@ -22,7 +23,8 @@ const defaultAvailability: WeeklyAvailability = {
   fri: [{ start: '09:00', end: '17:00' }],
 };
 
-const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+// Index-ordered for Date#getUTCDay (0 = Sunday), derived from the canonical WEEKDAYS.
+const WEEKDAY_KEYS: Weekday[] = ['sun', ...WEEKDAYS.slice(0, 6)];
 
 const toUtcMs = (day: Date, hhmm: string): number => {
   const [h, m] = hhmm.split(':').map(Number);

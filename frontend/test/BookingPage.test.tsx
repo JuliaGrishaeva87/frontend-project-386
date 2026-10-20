@@ -2,35 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import BookingPage from '../src/pages/BookingPage';
-import type { EventType, Slot } from '../src/api/types';
 import type { ApiClient } from '../src/api/client';
+import { buildFakeApi } from './helpers/fakeApi';
 
-const createFakeApi = (): ApiClient => {
-  const eventTypes: EventType[] = [
-    { id: 'intro', name: 'Intro call', durationMinutes: 15 },
-    { id: 'consult', name: 'Consultation', durationMinutes: 30 },
-  ];
-  const slots: Slot[] = [
-    { start: '2025-10-15T09:00:00.000Z', end: '2025-10-15T09:30:00.000Z' },
-    { start: '2025-10-15T10:00:00.000Z', end: '2025-10-15T10:30:00.000Z' },
-    { start: '2025-10-16T09:00:00.000Z', end: '2025-10-16T09:30:00.000Z' },
-  ];
-  return {
-    getEventTypes: vi.fn(async () => eventTypes),
-    getSlots: vi.fn(async () => slots),
-    createBooking: vi.fn(async (draft) => ({
-      id: 'b1',
-      eventTypeId: draft.eventTypeId,
-      start: draft.start,
-      end: '2025-10-15T09:30:00.000Z',
-      guestName: draft.guestName,
-      guestEmail: draft.guestEmail,
-    })),
-    getAvailability: vi.fn(async () => ({})),
-    putAvailability: vi.fn(async (a) => a),
-    createEventType: vi.fn(async (et) => ({ id: et.name.toLowerCase(), ...et })),
-  };
-};
+const createFakeApi = (): ApiClient => buildFakeApi();
 
 const openFirstSlot = async (
   api: ApiClient,

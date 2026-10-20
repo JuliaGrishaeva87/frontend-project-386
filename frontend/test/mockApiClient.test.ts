@@ -53,4 +53,22 @@ describe('createMockApiClient', () => {
     const after = await api.getSlots({ eventTypeId: 'intro', from, to });
     expect(after.some((s) => s.start === booked.start)).toBe(false);
   });
+
+  it('reflects host-saved availability when deriving slots', async () => {
+    const api = createMockApiClient();
+    await api.putAvailability({
+      mon: [{ start: '15:00', end: '16:00' }],
+    });
+    // 2025-10-13 is a Monday
+    const slots = await api.getSlots({
+      eventTypeId: 'intro',
+      from: '2025-10-13T00:00:00.000Z',
+      to: '2025-10-14T00:00:00.000Z',
+    });
+    expect(slots.length).toBeGreaterThan(0);
+    for (const s of slots) {
+      expect(s.start.slice(11, 16) >= '15:00').toBe(true);
+      expect(s.end.slice(11, 16) <= '16:00').toBe(true);
+    }
+  });
 });

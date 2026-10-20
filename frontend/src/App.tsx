@@ -1,5 +1,10 @@
-import BookingPage from './pages/BookingPage';
+import { BrowserRouter } from 'react-router-dom';
+import AppRoutes from './routes';
 
 export default function App() {
-  return <BookingPage />;
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  );
 }
