@@ -1,5 +1,5 @@
 {
-  "name": "frontend-project-386",
+  "name": "@hexlet/code",
   "version": "1.0.0",
   "private": true,
   "description": "Call scheduling app (simplified Cal.com) — monorepo",
@@ -13,7 +13,8 @@
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "pretest": "mkdir -p tmp/artifacts/test",
+    "test": "vitest run --reporter=default --reporter=junit --outputFile.junit=tmp/artifacts/test/results.xml --reporter=json --outputFile.json=tmp/artifacts/test/results.json"
   },
   "engines": {
     "node": ">=20"

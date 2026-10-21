@@ -7,6 +7,7 @@
 - Линтер: `npm run lint`
 - Форматирование: `npm run format`
 - Тесты: `npm run test`
+- Hexlet-контракт (ADR-0006): `make setup`, затем `make test` (пишет отчёты в `tmp/artifacts/test/`)
 
 ## Правила
 

@@ -10,3 +10,7 @@ agent/
 .env.*
 !.env.example
 .DS_Store
+
+# Generated test reports (nested artifacts for the Hexlet checker).
+# tmp/artifacts/demo/ and tmp/artifacts/screens/ are hand-made and stay tracked.
+tmp/artifacts/test/
