@@ -1,6 +1,14 @@
 export type EventType = {
   id: string;
   name: string;
+  description: string;
+  durationMinutes: number;
+};
+
+export type EventTypeDraft = {
+  id: string;
+  name: string;
+  description: string;
   durationMinutes: number;
 };
 

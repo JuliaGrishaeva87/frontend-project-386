@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { buildApp } from '../src/app.js';
 import { InMemoryRepository } from '../src/repository.js';
 import type { WeeklyAvailability } from '../src/types.js';
@@ -36,23 +39,74 @@ describe('backend API', () => {
     expect(ids).toContain('consult');
   });
 
-  it('creates an event type with a slug id', async () => {
+  it('creates an event type with the id, name, description and duration', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/event-types',
+      payload: {
+        id: 'deep-dive',
+        name: 'Deep Dive',
+        description: 'A deep dive session',
+        durationMinutes: 45,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as {
+      id: string;
+      name: string;
+      description: string;
+      durationMinutes: number;
+    };
+    expect(body.id).toBe('deep-dive');
+    expect(body.name).toBe('Deep Dive');
+    expect(body.description).toBe('A deep dive session');
+    expect(body.durationMinutes).toBe(45);
+  });
+
+  it('creates an event type without a description', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/event-types',
+      payload: { id: 'quick-chat', name: 'Quick chat', durationMinutes: 10 },
+    });
+    expect(res.statusCode).toBe(201);
+    expect((res.json() as { description: string }).description).toBe('');
+  });
+
+  it('rejects an event type without an id', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/event-types',
       payload: { name: 'Deep Dive', durationMinutes: 45 },
     });
-    expect(res.statusCode).toBe(201);
-    const body = res.json() as { id: string; name: string; durationMinutes: number };
-    expect(body.id).toBe('deep-dive');
-    expect(body.durationMinutes).toBe(45);
+    expect(res.statusCode).toBe(400);
+    expect((res.json() as { error: { code: string } }).error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('rejects an event type id that is not a slug', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/event-types',
+      payload: { id: 'Deep Dive!', name: 'Deep Dive', durationMinutes: 45 },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects a duplicate event type id', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/event-types',
+      payload: { id: 'intro', name: 'Another Intro', durationMinutes: 15 },
+    });
+    expect(res.statusCode).toBe(409);
+    expect((res.json() as { error: { code: string } }).error.code).toBe('CONFLICT');
   });
 
   it('rejects an event type without a name', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/event-types',
-      payload: { durationMinutes: 45 },
+      payload: { id: 'nameless', durationMinutes: 45 },
     });
     expect(res.statusCode).toBe(400);
     expect((res.json() as { error: { code: string } }).error.code).toBe('VALIDATION_ERROR');
@@ -62,9 +116,38 @@ describe('backend API', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/event-types',
-      payload: { name: 'Bad', durationMinutes: 0 },
+      payload: { id: 'bad', name: 'Bad', durationMinutes: 0 },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('lists bookings in chronological order', async () => {
+    const later = await app.inject({
+      method: 'POST',
+      url: '/api/bookings',
+      payload: {
+        eventTypeId: 'intro',
+        start: '2030-01-02T13:00:00.000Z',
+        guestName: 'Bob',
+        guestEmail: 'bob@example.com',
+      },
+    });
+    expect(later.statusCode).toBe(201);
+    await app.inject({
+      method: 'POST',
+      url: '/api/bookings',
+      payload: {
+        eventTypeId: 'intro',
+        start: '2030-01-01T13:00:00.000Z',
+        guestName: 'Alice',
+        guestEmail: 'alice@example.com',
+      },
+    });
+
+    const res = await app.inject({ method: 'GET', url: '/api/bookings' });
+    expect(res.statusCode).toBe(200);
+    const bookings = res.json() as Array<{ guestName: string }>;
+    expect(bookings.map((b) => b.guestName)).toEqual(['Alice', 'Bob']);
   });
 
   it('returns the seeded availability', async () => {
@@ -102,6 +185,52 @@ describe('backend API', () => {
       payload: { mon: [{ start: '9am', end: '5pm' }] },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects a range whose start is not before its end', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/availability',
+      payload: { mon: [{ start: '17:00', end: '09:00' }] },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/start must be before end/);
+
+    const same = await app.inject({
+      method: 'PUT',
+      url: '/api/availability',
+      payload: { mon: [{ start: '09:00', end: '09:00' }] },
+    });
+    expect(same.statusCode).toBe(400);
+  });
+
+  it('rejects overlapping ranges within a weekday', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/availability',
+      payload: {
+        mon: [
+          { start: '09:00', end: '12:00' },
+          { start: '11:00', end: '15:00' },
+        ],
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/must not overlap/);
+  });
+
+  it('accepts touching ranges', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/availability',
+      payload: {
+        mon: [
+          { start: '09:00', end: '12:00' },
+          { start: '12:00', end: '15:00' },
+        ],
+      },
+    });
+    expect(res.statusCode).toBe(200);
   });
 
   it('derives only future slots within the requested window', async () => {
@@ -261,5 +390,35 @@ describe('backend API', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
+  });
+});
+
+describe('static frontend', () => {
+  it('never caches the SPA shell and caches fingerprinted assets', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'call-scheduler-static-'));
+    mkdirSync(join(root, 'assets'));
+    writeFileSync(join(root, 'index.html'), '<!doctype html><div id="root"></div>');
+    writeFileSync(join(root, 'assets', 'app-123.js'), 'console.log(1)');
+
+    const repo = new InMemoryRepository({ availability: allDays });
+    const staticApp = buildApp({ repo, now: () => NOW, staticRoot: root });
+
+    try {
+      const shell = await staticApp.inject({ method: 'GET', url: '/' });
+      expect(shell.statusCode).toBe(200);
+      expect(shell.headers['cache-control']).toBe('no-store');
+      expect(shell.headers.etag).toBeUndefined();
+
+      const deepLink = await staticApp.inject({ method: 'GET', url: '/host/bookings' });
+      expect(deepLink.statusCode).toBe(200);
+      expect(deepLink.headers['cache-control']).toBe('no-store');
+
+      const asset = await staticApp.inject({ method: 'GET', url: '/assets/app-123.js' });
+      expect(asset.statusCode).toBe(200);
+      expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+    } finally {
+      await staticApp.close();
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

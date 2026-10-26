@@ -31,6 +31,11 @@ describe('routes', () => {
     expect(await screen.findByRole('heading', { name: 'Event types' })).toBeInTheDocument();
   });
 
+  it('renders upcoming meetings at /host/bookings', async () => {
+    renderAt('/host/bookings');
+    expect(await screen.findByRole('heading', { name: 'Upcoming meetings' })).toBeInTheDocument();
+  });
+
   it('redirects unknown paths to the booking page', async () => {
     renderAt('/nope');
     expect(await screen.findByRole('heading', { name: 'Book a call' })).toBeInTheDocument();

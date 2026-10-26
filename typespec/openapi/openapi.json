@@ -1,0 +1,516 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Call Scheduler API",
+    "version": "1.0.0"
+  },
+  "tags": [],
+  "paths": {
+    "/api/availability": {
+      "get": {
+        "operationId": "CallSchedulerApi_getAvailability",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyAvailability"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "CallSchedulerApi_putAvailability",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyAvailability"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeeklyAvailability"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings": {
+      "get": {
+        "operationId": "CallSchedulerApi_listBookings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Booking"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "CallSchedulerApi_createBooking",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "The request has succeeded and a new resource has been created as a result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The server cannot find the requested resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingDraft"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/event-types": {
+      "get": {
+        "operationId": "CallSchedulerApi_listEventTypes",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventType"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "CallSchedulerApi_createEventType",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "The request has succeeded and a new resource has been created as a result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventType"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the server.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventTypeDraft"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "CallSchedulerApi_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/slots": {
+      "get": {
+        "operationId": "CallSchedulerApi_listSlots",
+        "parameters": [
+          {
+            "name": "eventTypeId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "explode": false
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "explode": false
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "explode": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request has succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Slot"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The server could not understand the request due to invalid syntax.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The server cannot find the requested resource.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiErrorBody"
+          }
+        }
+      },
+      "ApiErrorBody": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "required": [
+          "id",
+          "end"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BookingDraft"
+          }
+        ]
+      },
+      "BookingDraft": {
+        "type": "object",
+        "required": [
+          "eventTypeId",
+          "start",
+          "guestName",
+          "guestEmail"
+        ],
+        "properties": {
+          "eventTypeId": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "guestName": {
+            "type": "string"
+          },
+          "guestEmail": {
+            "type": "string"
+          }
+        }
+      },
+      "EventType": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "durationMinutes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "EventTypeDraft": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "durationMinutes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "status",
+          "service"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        }
+      },
+      "Slot": {
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TimeRange": {
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Start of the range, HH:MM (UTC)."
+          },
+          "end": {
+            "type": "string",
+            "description": "End of the range, HH:MM (UTC)."
+          }
+        }
+      },
+      "WeeklyAvailability": {
+        "type": "object",
+        "properties": {
+          "mon": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeRange"
+            }
+          },
+          "tue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeRange"
+            }
+          },
+          "wed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeRange"
+            }
+          },
+          "thu": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeRange"
+            }
+          },
+          "fri": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeRange"
+            }
+          },
+          "sat": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeRange"
+            }
+          },
+          "sun": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeRange"
+            }
+          }
+        }
+      }
+    }
+  }
+}

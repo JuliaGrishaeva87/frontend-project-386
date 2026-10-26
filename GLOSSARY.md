@@ -13,7 +13,7 @@ A person who books a call from the public page without an account, identified on
 _Avoid_: Client, customer, visitor, user
 
 **EventType**:
-A named bookable meeting template with a fixed duration (for example "Intro call", 30 minutes). Every Booking references exactly one EventType.
+A bookable meeting template the Host defines: a slug `id` the Host chooses, a name, a description and a fixed duration (for example "Intro call", 15 minutes). Every Booking references exactly one EventType.
 _Avoid_: Meeting type, appointment type, event, call type
 
 **Availability**:

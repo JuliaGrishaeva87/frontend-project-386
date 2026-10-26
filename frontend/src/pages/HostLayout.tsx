@@ -16,6 +16,9 @@ export default function HostLayout() {
         <NavLink to="/host/event-types" className={linkClass}>
           Event types
         </NavLink>
+        <NavLink to="/host/bookings" className={linkClass}>
+          Upcoming meetings
+        </NavLink>
       </nav>
       <Outlet />
     </div>

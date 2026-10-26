@@ -62,4 +62,31 @@ describe('HostAvailabilityPage', () => {
     await user.click(screen.getByRole('button', { name: /save/i }));
     expect(api.putAvailability).toHaveBeenCalledWith({});
   });
+
+  it('rejects a range that does not end after it starts', async () => {
+    const api = createFakeApi({ mon: [{ start: '17:00', end: '09:00' }] });
+    render(<HostAvailabilityPage api={api} />);
+    const user = userEvent.setup();
+    await screen.findByLabelText('mon start 0');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+    expect(api.putAvailability).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /start time must be before end time/i,
+    );
+  });
+
+  it('rejects overlapping ranges within a weekday', async () => {
+    const api = createFakeApi({
+      mon: [
+        { start: '09:00', end: '12:00' },
+        { start: '11:00', end: '15:00' },
+      ],
+    });
+    render(<HostAvailabilityPage api={api} />);
+    const user = userEvent.setup();
+    await screen.findByLabelText('mon start 1');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+    expect(api.putAvailability).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/must not overlap/i);
+  });
 });

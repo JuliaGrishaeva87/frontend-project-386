@@ -1,4 +1,4 @@
-.PHONY: setup install test artifacts lint build clean
+.PHONY: setup install test test-e2e artifacts lint build contract clean
 
 # Harness contract (ADR-0006): `make setup` then `make test` (exit code = verdict).
 setup: install
@@ -12,7 +12,14 @@ install:
 test:
 	npm run test
 
+test-e2e:
+	npm run test:e2e
+
 artifacts: test
+
+# Regenerates the OpenAPI document and the TypeScript SDK from typespec/.
+contract:
+	npm run contract:generate
 
 lint:
 	npm run lint

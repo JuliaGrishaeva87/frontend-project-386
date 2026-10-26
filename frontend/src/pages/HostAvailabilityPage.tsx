@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { WEEKDAYS } from '../api/types';
 import type { ApiClient, TimeRange, Weekday, WeeklyAvailability } from '../api/types';
 import { defaultApiClient } from '../api/defaultApiClient';
+import { findAvailabilityError } from '../utils/availabilityErrors';
 
 type Props = {
   api?: ApiClient;
@@ -49,6 +50,11 @@ export default function HostAvailabilityPage({ api = defaultApiClient }: Props) 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const invalid = findAvailabilityError(availability);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
     try {
       const next = await api.putAvailability(availability);
       setAvailability(next);
@@ -61,7 +67,11 @@ export default function HostAvailabilityPage({ api = defaultApiClient }: Props) 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Availability</h1>
-      {error && <p className="text-red-600 mb-2">{error}</p>}
+      {error && (
+        <p className="text-red-600 mb-2" role="alert">
+          {error}
+        </p>
+      )}
       <form onSubmit={handleSave} className="space-y-4" noValidate>
         {WEEKDAYS.map((day) => (
           <div key={day} className="border rounded p-3">

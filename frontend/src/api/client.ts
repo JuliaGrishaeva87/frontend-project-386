@@ -1,10 +1,28 @@
-import type { Booking, BookingDraft, EventType, Slot, Weekday, WeeklyAvailability } from './types';
+import type {
+  Booking,
+  BookingDraft,
+  EventType,
+  EventTypeDraft,
+  Slot,
+  Weekday,
+  WeeklyAvailability,
+} from './types';
 import type { ApiClient } from './types';
 import { WEEKDAYS } from './types';
 
 const defaultEventTypes: EventType[] = [
-  { id: 'intro', name: 'Intro call', durationMinutes: 15 },
-  { id: 'consult', name: 'Consultation', durationMinutes: 30 },
+  {
+    id: 'intro',
+    name: 'Intro call',
+    description: 'A short introduction to get to know each other.',
+    durationMinutes: 15,
+  },
+  {
+    id: 'consult',
+    name: 'Consultation',
+    description: 'A longer session to go through your questions in detail.',
+    durationMinutes: 30,
+  },
 ];
 
 const defaultAvailability: WeeklyAvailability = {
@@ -40,6 +58,8 @@ export function createMockApiClient(): ApiClient {
       const rangeEnd = Date.parse(to);
       const durationMs = et.durationMinutes * 60 * 1000;
       const slots: Slot[] = [];
+      // Only future slots are offered, matching the backend (from = max(now, requestedFrom)).
+      const fromMs = Math.max(rangeStart, Date.now());
 
       for (let t = rangeStart; t <= rangeEnd; t += 24 * 60 * 60 * 1000) {
         const day = new Date(t);
@@ -49,7 +69,7 @@ export function createMockApiClient(): ApiClient {
           const close = toUtcMs(day, window.end);
           for (let s = open; s + durationMs <= close; s += durationMs) {
             const e = s + durationMs;
-            if (s < rangeStart || e > rangeEnd) continue;
+            if (s < fromMs || e > rangeEnd) continue;
             // A slot is free only if it overlaps no existing booking (any event type).
             if (bookings.some((b) => s < Date.parse(b.end) && Date.parse(b.start) < e)) continue;
             slots.push({ start: new Date(s).toISOString(), end: new Date(e).toISOString() });
@@ -62,10 +82,22 @@ export function createMockApiClient(): ApiClient {
       const et = eventTypes.find((e) => e.id === draft.eventTypeId);
       if (!et) throw new Error('Invalid event type');
       const durationMs = et.durationMinutes * 60 * 1000;
-      const end = new Date(new Date(draft.start).getTime() + durationMs).toISOString();
+      const startMs = Date.parse(draft.start);
+      const endMs = startMs + durationMs;
+      if (startMs <= Date.now()) {
+        throw new Error('start must be in the future');
+      }
+      // The same rule as the backend: a slot may not overlap any existing booking.
+      if (bookings.some((b) => startMs < Date.parse(b.end) && Date.parse(b.start) < endMs)) {
+        throw new Error('requested slot is not available');
+      }
+      const end = new Date(endMs).toISOString();
       const booking: Booking = { ...draft, id: String(idCounter++), end };
       bookings.push(booking);
       return booking;
+    },
+    async getBookings() {
+      return [...bookings].sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
     },
     async getAvailability() {
       return availability;
@@ -74,9 +106,11 @@ export function createMockApiClient(): ApiClient {
       availability = a;
       return availability;
     },
-    async createEventType(et: Pick<EventType, 'name' | 'durationMinutes'>) {
-      const id = et.name.toLowerCase().replace(/\s+/g, '-');
-      const created: EventType = { id, name: et.name, durationMinutes: et.durationMinutes };
+    async createEventType(draft: EventTypeDraft) {
+      if (eventTypes.some((e) => e.id === draft.id)) {
+        throw new Error('An event type with this id already exists');
+      }
+      const created: EventType = { ...draft };
       eventTypes.push(created);
       return created;
     },

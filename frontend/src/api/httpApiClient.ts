@@ -1,43 +1,48 @@
-import type { ApiClient, Booking, BookingDraft, EventType, Slot, WeeklyAvailability } from './types';
+import createClient from 'openapi-fetch';
+import type { paths } from './generated/schema';
+import type {
+  ApiClient,
+  ApiError,
+  Booking,
+  BookingDraft,
+  EventType,
+  EventTypeDraft,
+  Slot,
+  WeeklyAvailability,
+} from './types';
 
-const BASE = '/api';
+type ApiResult<T> = { data?: T; error?: unknown; response: Response };
 
-type ApiError = { error: { code: string; message: string } };
-
-const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'content-type': 'application/json' },
-    ...init,
-  });
-  if (!res.ok) {
-    let message = `Request failed with status ${res.status}`;
-    try {
-      const body = (await res.json()) as Partial<ApiError>;
-      if (body.error?.message) message = body.error.message;
-    } catch {
-      // non-JSON error body; keep the status message
-    }
-    throw new Error(message);
-  }
-  return (await res.json()) as T;
+const unwrap = <T>({ data, error, response }: ApiResult<T>): T => {
+  if (response.ok && data !== undefined) return data;
+  const apiError = error as ApiError | undefined;
+  const message =
+    apiError?.error?.message ?? `Request failed with status ${response.status}`;
+  throw new Error(message);
 };
 
-export function createHttpApiClient(): ApiClient {
+type ClientOptions = { baseUrl?: string };
+
+const defaultBaseUrl = typeof globalThis.location === 'undefined' ? '' : globalThis.location.origin;
+
+export function createHttpApiClient({ baseUrl = defaultBaseUrl }: ClientOptions = {}): ApiClient {
+  const client = createClient<paths>({ baseUrl });
+
   return {
-    getEventTypes: () => request<EventType[]>('/event-types'),
-    getSlots: ({ eventTypeId, from, to }) => {
-      const params = new URLSearchParams({ eventTypeId, from, to });
-      return request<Slot[]>(`/slots?${params.toString()}`);
-    },
-    createBooking: (draft: BookingDraft) =>
-      request<Booking>('/bookings', { method: 'POST', body: JSON.stringify(draft) }),
-    getAvailability: () => request<WeeklyAvailability>('/availability'),
-    putAvailability: (availability: WeeklyAvailability) =>
-      request<WeeklyAvailability>('/availability', {
-        method: 'PUT',
-        body: JSON.stringify(availability),
-      }),
-    createEventType: (et: Pick<EventType, 'name' | 'durationMinutes'>) =>
-      request<EventType>('/event-types', { method: 'POST', body: JSON.stringify(et) }),
+    getEventTypes: async (): Promise<EventType[]> =>
+      unwrap(await client.GET('/api/event-types')),
+    getSlots: async ({ eventTypeId, from, to }): Promise<Slot[]> =>
+      unwrap(
+        await client.GET('/api/slots', { params: { query: { eventTypeId, from, to } } }),
+      ),
+    createBooking: async (draft: BookingDraft): Promise<Booking> =>
+      unwrap(await client.POST('/api/bookings', { body: draft })),
+    getBookings: async (): Promise<Booking[]> => unwrap(await client.GET('/api/bookings')),
+    getAvailability: async (): Promise<WeeklyAvailability> =>
+      unwrap(await client.GET('/api/availability')),
+    putAvailability: async (availability: WeeklyAvailability): Promise<WeeklyAvailability> =>
+      unwrap(await client.PUT('/api/availability', { body: availability })),
+    createEventType: async (et: EventTypeDraft): Promise<EventType> =>
+      unwrap(await client.POST('/api/event-types', { body: et })),
   };
 }

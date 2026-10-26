@@ -14,6 +14,8 @@ export default tseslint.config(
       '.agents/**',
       'agent/**',
       '.claude/**',
+      'typespec/openapi/**',
+      'frontend/src/api/generated/**',
     ],
   },
   js.configs.recommended,

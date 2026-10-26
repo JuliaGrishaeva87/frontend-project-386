@@ -1,9 +1,9 @@
-import type { Booking, EventType, WeeklyAvailability } from './types.js';
+import type { Booking, EventType, EventTypeDraft, WeeklyAvailability } from './types.js';
 
 export interface Repository {
   listEventTypes(): EventType[];
   getEventType(id: string): EventType | undefined;
-  createEventType(input: { name: string; durationMinutes: number }): EventType;
+  createEventType(input: EventTypeDraft): EventType;
   getAvailability(): WeeklyAvailability;
   setAvailability(availability: WeeklyAvailability): WeeklyAvailability;
   listBookings(): Booking[];
@@ -11,8 +11,18 @@ export interface Repository {
 }
 
 const defaultEventTypes: EventType[] = [
-  { id: 'intro', name: 'Intro call', durationMinutes: 15 },
-  { id: 'consult', name: 'Consultation', durationMinutes: 30 },
+  {
+    id: 'intro',
+    name: 'Intro call',
+    description: 'A short introduction to get to know each other.',
+    durationMinutes: 15,
+  },
+  {
+    id: 'consult',
+    name: 'Consultation',
+    description: 'A longer session to go through your questions in detail.',
+    durationMinutes: 30,
+  },
 ];
 
 const defaultAvailability: WeeklyAvailability = {
@@ -44,9 +54,8 @@ export class InMemoryRepository implements Repository {
     return this.eventTypes.find((et) => et.id === id);
   }
 
-  createEventType(input: { name: string; durationMinutes: number }): EventType {
-    const id = input.name.toLowerCase().replace(/\s+/g, '-');
-    const created: EventType = { id, name: input.name, durationMinutes: input.durationMinutes };
+  createEventType(input: EventTypeDraft): EventType {
+    const created: EventType = { ...input };
     this.eventTypes.push(created);
     return created;
   }

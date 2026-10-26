@@ -5,3 +5,5 @@ package-lock.json
 .agents
 agent
 .claude
+typespec/openapi
+frontend/src/api/generated

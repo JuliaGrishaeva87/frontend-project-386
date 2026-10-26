@@ -15,6 +15,7 @@ type BuildAppOptions = {
 
 const HHMM = /^\d{2}:\d{2}$/;
 const EMAIL = /.+@.+\..+/;
+const EVENT_TYPE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const DAY_MS = 86_400_000;
 const DEFAULT_HORIZON_MS = 14 * DAY_MS;
 const API_PREFIX = '/api';
@@ -44,8 +45,15 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
       api.post('/event-types', async (req, reply) => {
         const body = isObject(req.body) ? req.body : {};
+        const id = typeof body.id === 'string' ? body.id.trim() : '';
         const name = typeof body.name === 'string' ? body.name.trim() : '';
+        const description = typeof body.description === 'string' ? body.description.trim() : '';
         const durationMinutes = body.durationMinutes;
+        if (!EVENT_TYPE_ID.test(id)) {
+          return reply
+            .code(400)
+            .send(error('VALIDATION_ERROR', 'id must be lowercase words separated by dashes'));
+        }
         if (!name) {
           return reply.code(400).send(error('VALIDATION_ERROR', 'name is required'));
         }
@@ -54,7 +62,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
             .code(400)
             .send(error('VALIDATION_ERROR', 'durationMinutes must be a positive integer'));
         }
-        return reply.code(201).send(repo.createEventType({ name, durationMinutes }));
+        if (repo.getEventType(id)) {
+          return reply.code(409).send(error('CONFLICT', 'an event type with this id already exists'));
+        }
+        return reply.code(201).send(repo.createEventType({ id, name, description, durationMinutes }));
       });
 
       api.get('/availability', async () => repo.getAvailability());
@@ -71,15 +82,30 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           if (!Array.isArray(value)) {
             return reply.code(400).send(error('VALIDATION_ERROR', `${key} must be an array`));
           }
-          for (const range of value as Array<{ start?: unknown; end?: unknown }>) {
+          const ranges = value as TimeRange[];
+          for (const range of ranges) {
             const { start, end } = range ?? {};
             if (!isHhMm(start) || !isHhMm(end)) {
               return reply
                 .code(400)
                 .send(error('VALIDATION_ERROR', `${key} ranges must be HH:MM strings`));
             }
+            if (start >= end) {
+              return reply
+                .code(400)
+                .send(error('VALIDATION_ERROR', `${key} range start must be before end`));
+            }
           }
-          next[key as Weekday] = value as TimeRange[];
+          // Ranges within a weekday must not overlap; touching ranges are fine.
+          const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
+          for (let i = 1; i < sorted.length; i++) {
+            if (sorted[i].start < sorted[i - 1].end) {
+              return reply
+                .code(400)
+                .send(error('VALIDATION_ERROR', `${key} ranges must not overlap`));
+            }
+          }
+          next[key as Weekday] = ranges;
         }
         return repo.setAvailability(next);
       });
@@ -116,6 +142,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
           to: toMs,
         });
       });
+
+      api.get('/bookings', async () =>
+        [...repo.listBookings()].sort((a, b) => Date.parse(a.start) - Date.parse(b.start)),
+      );
 
       api.post('/bookings', async (req, reply) => {
         const body = isObject(req.body) ? req.body : {};
@@ -180,7 +210,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const staticRoot = options.staticRoot ?? join(process.cwd(), 'public');
   const staticEnabled = existsSync(staticRoot);
   if (staticEnabled) {
-    app.register(fastifyStatic, { root: staticRoot });
+    app.register(fastifyStatic, {
+      root: staticRoot,
+      cacheControl: false,
+      etag: false,
+      lastModified: false,
+      setHeaders(reply, filePath) {
+        // The SPA shell changes on every deploy: never let a browser reuse it.
+        // Vite fingerprints the assets, so those can be cached forever.
+        reply.header(
+          'cache-control',
+          filePath.endsWith('index.html') ? 'no-store' : 'public, max-age=31536000, immutable',
+        );
+      },
+    });
   }
 
   // Unknown API routes always answer with the JSON error shape, whether or not the
@@ -189,6 +232,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   app.setNotFoundHandler((req, reply) => {
     const isApi = req.url === API_PREFIX || req.url.startsWith(`${API_PREFIX}/`);
     if (!isApi && staticEnabled) {
+      reply.header('cache-control', 'no-store');
       return reply.sendFile('index.html');
     }
     return reply.code(404).send(error('NOT_FOUND', 'route not found'));

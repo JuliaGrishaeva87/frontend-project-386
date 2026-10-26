@@ -1,11 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ApiClient, Booking, EventType, Slot } from '../api/types';
 import { defaultApiClient } from '../api/defaultApiClient';
 import { groupSlotsByDate } from '../utils/groupSlotsByDate';
+import { buildCalendarDays } from '../utils/buildCalendarDays';
+import SlotCalendar from '../components/SlotCalendar';
 
 type Props = {
   api?: ApiClient;
 };
+
+const BOOKING_WINDOW_DAYS = 14;
 
 export default function BookingPage({ api = defaultApiClient }: Props) {
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
@@ -17,33 +21,68 @@ export default function BookingPage({ api = defaultApiClient }: Props) {
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [bookingError, setBookingError] = useState('');
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [loadingEventTypes, setLoadingEventTypes] = useState(true);
 
   useEffect(() => {
-    api.getEventTypes().then(setEventTypes).catch(() => setEventTypes([]));
+    let cancelled = false;
+    api.getEventTypes()
+      .then((loaded) => {
+        if (!cancelled) setEventTypes(loaded);
+      })
+      .catch(() => {
+        if (!cancelled) setEventTypes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingEventTypes(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [api]);
+
+  const fetchSlots = useCallback(
+    async (eventType: EventType) => {
+      const from = new Date();
+      from.setUTCHours(0, 0, 0, 0);
+      const to = new Date(from);
+      to.setUTCDate(to.getUTCDate() + BOOKING_WINDOW_DAYS);
+      return api.getSlots({
+        eventTypeId: eventType.id,
+        from: from.toISOString(),
+        to: to.toISOString(),
+      });
+    },
+    [api],
+  );
 
   useEffect(() => {
     if (!selectedEventType) return;
-    const from = new Date();
-    from.setUTCHours(0, 0, 0, 0);
-    const to = new Date(from);
-    to.setUTCDate(to.getUTCDate() + 14);
-    api
-      .getSlots({
-        eventTypeId: selectedEventType.id,
-        from: from.toISOString(),
-        to: to.toISOString(),
+    let cancelled = false;
+    fetchSlots(selectedEventType)
+      .then((loaded) => {
+        if (!cancelled) setSlots(loaded);
       })
-      .then(setSlots)
-      .catch(() => setSlots([]));
-  }, [api, selectedEventType]);
+      .catch(() => {
+        if (!cancelled) setSlots([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSlots(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchSlots, selectedEventType]);
 
   const grouped = useMemo(() => groupSlotsByDate(slots), [slots]);
+  const calendarDays = useMemo(() => buildCalendarDays(new Date(), BOOKING_WINDOW_DAYS), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setNameError('');
     setEmailError('');
+    setBookingError('');
     let hasError = false;
     if (!guestName.trim()) {
       setNameError('Name is required');
@@ -64,68 +103,69 @@ export default function BookingPage({ api = defaultApiClient }: Props) {
         guestEmail: email,
       });
       setBooking(b);
-    } catch {
-      /* booking failed; form stays visible for retry */
+      setSelectedSlot(null);
+      await fetchSlots(selectedEventType)
+        .then(setSlots)
+        .catch(() => {});
+    } catch (err) {
+      // The booking failed (for example the slot was taken meanwhile): the form stays
+      // so the guest can pick another slot and try again.
+      setBookingError(err instanceof Error ? err.message : 'Failed to create the booking');
     }
   };
-
-  const formatTime = (iso: string) => iso.slice(11, 16);
 
   return (
     <div className="max-w-3xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Book a call</h1>
       <div className="mb-4">
-        <h2 className="text-lg mb-2">Event types</h2>
-        <div className="flex gap-2 flex-wrap">
+        <h2 className="text-lg mb-2">Booking types</h2>
+        {!loadingEventTypes && eventTypes.length === 0 && (
+          <p className="text-sm text-gray-600">No booking types available yet.</p>
+        )}
+        <ul className="grid sm:grid-cols-2 gap-2">
           {eventTypes.map((et) => (
-            <button
-              key={et.id}
-              type="button"
-              onClick={() => {
-                setSelectedEventType(et);
-                setSlots([]);
-                setSelectedSlot(null);
-                setBooking(null);
-                setNameError('');
-                setEmailError('');
-              }}
-              className="px-3 py-1 border rounded"
-            >
-              {et.name}
-            </button>
+            <li key={et.id} className="border rounded p-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedEventType(et);
+                  setSlots([]);
+                  setSelectedSlot(null);
+                  setBooking(null);
+                  setNameError('');
+                  setEmailError('');
+                  setBookingError('');
+                  setLoadingSlots(true);
+                }}
+                className={`text-left font-medium ${
+                  selectedEventType?.id === et.id ? 'text-blue-700 underline' : ''
+                }`}
+              >
+                {et.name}
+              </button>
+              {et.description && <p className="text-sm text-gray-600 mt-1">{et.description}</p>}
+              <p className="text-sm text-gray-500 mt-1">{et.durationMinutes} min</p>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
       {selectedEventType && (
         <div className="mb-4">
           <h2 className="text-lg mb-2">Available slots</h2>
-          {Object.keys(grouped).length === 0 && <p>No available slots</p>}
-          {Object.keys(grouped)
-            .sort()
-            .map((date) => (
-              <div key={date} className="mb-3">
-                <div className="font-semibold mb-1">{date}</div>
-                <div className="flex gap-2 flex-wrap">
-                  {grouped[date].map((s) => (
-                    <button
-                      key={s.start}
-                      type="button"
-                      onClick={() => {
-                        setSelectedSlot(s);
-                        setBooking(null);
-                        setNameError('');
-                        setEmailError('');
-                      }}
-                      className="px-2 py-1 border rounded text-sm"
-                      data-testid="slot"
-                    >
-                      {formatTime(s.start)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+          {slots.length === 0 && !loadingSlots && <p>No available slots</p>}
+          <SlotCalendar
+            days={calendarDays}
+            slotsByDate={grouped}
+            selectedSlot={selectedSlot}
+            onSelect={(s) => {
+              setSelectedSlot(s);
+              setBooking(null);
+              setNameError('');
+              setEmailError('');
+              setBookingError('');
+            }}
+          />
         </div>
       )}
 
@@ -162,6 +202,11 @@ export default function BookingPage({ api = defaultApiClient }: Props) {
           <button type="submit" className="px-3 py-1 border rounded">
             Book
           </button>
+          {bookingError && (
+            <p className="text-sm text-red-600" role="alert">
+              {bookingError}
+            </p>
+          )}
         </form>
       )}
 
