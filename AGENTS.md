@@ -8,7 +8,7 @@
 - Форматирование: `npm run format`
 - Тесты: `npm run test`
 - Браузерные тесты: `npm run test:e2e` (Playwright + Chromium; перед первым запуском `npx playwright install chromium`). В WSL1 браузеры нестабильны — проверка в CI.
-- Проверка публичного деплоя теми же сценариями: `E2E_BASE_URL=https://<app>.onrender.com npm run test:e2e` (локальный сервер не поднимается).
+- Проверка публичного деплоя теми же сценариями: `E2E_BASE_URL=https://frontend-project-386.onrender.com npm run test:e2e` (локальный сервер не поднимается).
 - Контракт и SDK: `npm run contract:generate` (TypeSpec → OpenAPI → TS-схема), проверка дрейфа в CI — `npm run contract:check`
 - Hexlet-контракт (ADR-0006): `make setup`, затем `make test` (пишет отчёты в `tmp/artifacts/test/`)
 
