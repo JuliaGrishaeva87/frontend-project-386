@@ -4,8 +4,11 @@
     "render": {
       "type": "remote",
       "url": "https://mcp.render.com/mcp",
-      "oauth": {},
-      "enabled": true
+      "enabled": true,
+      "oauth": false,
+      "headers": {
+        "Authorization": "Bearer {env:RENDER_API_KEY}"
+      }
     }
   }
 }
