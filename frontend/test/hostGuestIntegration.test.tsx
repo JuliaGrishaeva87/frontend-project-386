@@ -16,18 +16,34 @@ const lateAfternoon: WeeklyAvailability = Object.fromEntries(
 describe('host to guest integration', () => {
   it('availability saved by the Host shapes the slots the guest sees', async () => {
     await mockApiClient.putAvailability(lateAfternoon);
-    render(
+    const { unmount } = render(
       <MemoryRouter initialEntries={['/host/availability']}>
         <AppRoutes />
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: 'Availability' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Availability' }),
+    ).toBeInTheDocument();
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppRoutes />
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'Calendar' }),
+    ).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole('link', { name: /guest view/i }));
-    expect(await screen.findByRole('heading', { name: 'Book a call' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /intro call/i }));
+    await user.click(screen.getByRole('button', { name: /записаться/i }));
+    const card = await screen.findByText('Встреча 15 минут');
+    await user.click(card);
+    const days = await screen.findAllByTestId('calendar-day');
+    const dayBtn = days.find(
+      (d) => d.getAttribute('data-available') === 'true',
+    );
+    await user.click(dayBtn);
     const slotButtons = await screen.findAllByTestId('slot');
     expect(slotButtons.length).toBeGreaterThan(0);
     for (const button of slotButtons) {

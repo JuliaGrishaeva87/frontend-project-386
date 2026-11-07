@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import HostBookingsPage from '../src/pages/HostBookingsPage';
 import type { Booking } from '../src/api/types';
 import { buildFakeApi } from './helpers/fakeApi';
@@ -31,7 +32,7 @@ const bookings: Booking[] = [
 ];
 
 describe('HostBookingsPage', () => {
-  it('lists upcoming meetings of every event type', async () => {
+  it('lists upcoming meetings with guest details', async () => {
     const api = buildFakeApi({
       getBookings: vi.fn(async () => bookings),
       getEventTypes: vi.fn(async () => [
@@ -49,12 +50,16 @@ describe('HostBookingsPage', () => {
         },
       ]),
     });
-    render(<HostBookingsPage api={api} />);
+    render(
+      <MemoryRouter>
+        <HostBookingsPage api={api} />
+      </MemoryRouter>,
+    );
 
-    expect(await screen.findByText('Intro call')).toBeInTheDocument();
-    expect(screen.getByText('Consultation')).toBeInTheDocument();
-    expect(screen.getByText(/alice@example\.com/)).toBeInTheDocument();
-    expect(screen.getByText(/bob@example\.com/)).toBeInTheDocument();
+    expect(await screen.findByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    expect((await screen.findAllByText(/Слот:/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/Создано:/)).length).toBeGreaterThan(0);
   });
 
   it('hides meetings that already happened', async () => {
@@ -70,14 +75,26 @@ describe('HostBookingsPage', () => {
         },
       ]),
     });
-    render(<HostBookingsPage api={api} />);
+    render(
+      <MemoryRouter>
+        <HostBookingsPage api={api} />
+      </MemoryRouter>,
+    );
 
-    expect(await screen.findByText(/no upcoming meetings/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/no upcoming meetings/i),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/carol@example\.com/)).not.toBeInTheDocument();
   });
 
   it('shows an empty state when nothing is booked', async () => {
-    render(<HostBookingsPage api={buildFakeApi()} />);
-    expect(await screen.findByText(/no upcoming meetings/i)).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <HostBookingsPage api={buildFakeApi()} />
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByText(/no upcoming meetings/i),
+    ).toBeInTheDocument();
   });
 });

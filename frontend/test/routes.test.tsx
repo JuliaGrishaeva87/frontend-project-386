@@ -13,31 +13,43 @@ const renderAt = (path: string) =>
 describe('routes', () => {
   it('renders the guest booking page at /', async () => {
     renderAt('/');
-    expect(await screen.findByRole('heading', { name: 'Book a call' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Calendar' }),
+    ).toBeInTheDocument();
   });
 
   it('redirects /host to /host/availability', async () => {
     renderAt('/host');
-    expect(await screen.findByRole('heading', { name: 'Availability' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Availability' }),
+    ).toBeInTheDocument();
   });
 
   it('renders the availability editor at /host/availability', async () => {
     renderAt('/host/availability');
-    expect(await screen.findByRole('heading', { name: 'Availability' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Availability' }),
+    ).toBeInTheDocument();
   });
 
   it('renders event types at /host/event-types', async () => {
     renderAt('/host/event-types');
-    expect(await screen.findByRole('heading', { name: 'Event types' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Event types' }),
+    ).toBeInTheDocument();
   });
 
   it('renders upcoming meetings at /host/bookings', async () => {
     renderAt('/host/bookings');
-    expect(await screen.findByRole('heading', { name: 'Upcoming meetings' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Предстоящие события' }),
+    ).toBeInTheDocument();
   });
 
   it('redirects unknown paths to the booking page', async () => {
     renderAt('/nope');
-    expect(await screen.findByRole('heading', { name: 'Book a call' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Calendar' }),
+    ).toBeInTheDocument();
   });
 });

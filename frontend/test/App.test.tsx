@@ -5,6 +5,8 @@ import App from '../src/App';
 describe('App', () => {
   it('renders the booking page', async () => {
     render(<App />);
-    expect(await screen.findByText('Book a call')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Calendar' }),
+    ).toBeInTheDocument();
   });
 });

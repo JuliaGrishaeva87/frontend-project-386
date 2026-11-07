@@ -1,32 +1,68 @@
 import { test, expect } from '@playwright/test';
 
-test('guest books a free slot and the owner sees the meeting', async ({ page, context }) => {
+test('guest books a free slot and the owner sees the meeting', async ({
+  page,
+  context,
+}) => {
   const guestName = `E2E Guest ${Date.now()}`;
   const guestEmail = 'playwright@example.com';
 
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: /booking types/i })).toBeVisible();
-  await page.getByRole('button', { name: /intro call/i }).click();
+  const bookNow = page.getByRole('button', { name: 'Записаться →' });
+  await expect(bookNow).toBeVisible({ timeout: 15000 });
+  await bookNow.dispatchEvent('click');
 
-  await expect(page.getByTestId('calendar-day')).toHaveCount(14);
+  await expect(
+    page.getByRole('heading', { name: /запись на звонок/i }),
+  ).toBeVisible({ timeout: 15000 });
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  await expect(page.getByTestId('calendar-day')).toHaveCount(daysInMonth);
 
-  const firstSlot = page.getByTestId('slot').first();
-  await expect(firstSlot).toBeVisible();
-  const start = await firstSlot.getAttribute('data-start');
+  const availableDays = page.locator(
+    'button[data-testid="calendar-day"][data-available="true"]',
+  );
+  const firstAvailable = availableDays.first();
+  await expect(firstAvailable).toBeVisible({ timeout: 15000 });
+  const start = await firstAvailable.getAttribute('data-start');
   expect(start).toBeTruthy();
+  await firstAvailable.dispatchEvent('click');
 
-  await firstSlot.click();
-  await page.getByLabel(/name/i).fill(guestName);
-  await page.getByLabel(/email/i).fill(guestEmail);
-  await page.getByRole('button', { name: /^book$/i }).click();
+  const continueButton = page.getByRole('button', { name: /продолжить/i });
+  await expect(continueButton).toBeDisabled({ timeout: 15000 });
 
-  await expect(page.getByText(/booking confirmed/i)).toBeVisible();
-  await expect(page.locator(`[data-testid="slot"][data-start="${start}"]`)).toHaveCount(0);
+  const firstPill = page.locator('button[data-testid="slot"]').first();
+  await expect(firstPill).toBeVisible({ timeout: 15000 });
+  await firstPill.dispatchEvent('click');
+
+  await expect(continueButton).toBeEnabled({ timeout: 15000 });
+  await continueButton.dispatchEvent('click');
+
+  await expect(
+    page.getByRole('heading', { name: /подтверждение записи/i }),
+  ).toBeVisible({ timeout: 15000 });
+
+  await page.getByPlaceholder(/имя/i).fill(guestName);
+  await page.getByPlaceholder(/email/i).fill(guestEmail);
+  await page
+    .getByRole('button', { name: /подтвердить запись/i })
+    .dispatchEvent('click');
+
+  await expect(
+    page.getByRole('heading', { name: /бронь подтверждена/i }),
+  ).toBeVisible();
+
+  const bookAgain = page.getByRole('button', { name: /забронировать еще/i });
+  await expect(bookAgain).toBeVisible();
 
   const host = await context.newPage();
   await host.goto('/host/bookings');
-  await expect(host.getByRole('heading', { name: /upcoming meetings/i })).toBeVisible();
+  await expect(
+    host.getByRole('heading', { name: /upcoming meetings/i }),
+  ).toBeVisible();
 
   const meeting = host.locator('li').filter({ hasText: guestName });
   await expect(meeting).toBeVisible();

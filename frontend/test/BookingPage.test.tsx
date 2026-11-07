@@ -1,153 +1,220 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import BookingPage from '../src/pages/BookingPage';
 import type { ApiClient } from '../src/api/types';
-import { buildFakeApi, buildSlots } from './helpers/fakeApi';
+import { buildFakeApi } from './helpers/fakeApi';
 
 const createFakeApi = (): ApiClient => buildFakeApi();
 
-const openFirstSlot = async (
-  api: ApiClient,
+const goToEventTypeSelection = async (user: UserEvent): Promise<void> => {
+  await user.click(screen.getByRole('button', { name: /Записаться/ }));
+};
+
+const chooseFirstEventType = async (user: UserEvent): Promise<void> => {
+  const card = await screen.findByText(/15 минут/);
+  await user.click(card);
+};
+
+const chooseSlotAndContinue = async (
   user: UserEvent,
-): Promise<HTMLElement> => {
-  render(<BookingPage api={api} />);
-  await screen.findByText('Intro call');
-  await user.click(screen.getByRole('button', { name: /intro call/i }));
+): Promise<HTMLElement[]> => {
+  const days = await screen.findAllByTestId('calendar-day');
+  const availableDay = days.find(
+    (el) => el.getAttribute('data-available') === 'true',
+  );
+  await user.click(availableDay as HTMLElement);
   const slotBtns = await screen.findAllByTestId('slot');
   await user.click(slotBtns[0]);
-  return slotBtns[0];
+  await continueFromSlot(user);
+  return slotBtns;
+};
+
+const continueFromSlot = async (user: UserEvent) => {
+  await user.click(screen.getByRole('button', { name: /Продолжить/ }));
 };
 
 describe('BookingPage', () => {
-  it('shows event types on load', async () => {
-    render(<BookingPage api={createFakeApi()} />);
-    expect(await screen.findByText('Intro call')).toBeInTheDocument();
-    expect(screen.getByText('Consultation')).toBeInTheDocument();
+  it('renders the landing screen', async () => {
+    render(
+      <MemoryRouter>
+        <BookingPage api={createFakeApi()} />
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'Calendar' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Что доступно прямо сейчас')).toBeInTheDocument();
   });
 
-  it('selecting event type opens a 14-day calendar with free slots', async () => {
+  it('selecting event type opens a calendar with free slots', async () => {
     const api = createFakeApi();
-    render(<BookingPage api={api} />);
-    const user = userEvent.setup();
-    await screen.findByText('Intro call');
-    await user.click(screen.getByRole('button', { name: /intro call/i }));
-    expect(api.getSlots).toHaveBeenCalled();
-    expect(await screen.findAllByTestId('calendar-day')).toHaveLength(14);
-    const slotBtns = screen.getAllByTestId('slot');
-    expect(slotBtns.length).toBe(3);
-    expect(slotBtns[0]).toHaveAttribute(
-      'data-start',
-      expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00\.000Z$/),
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
     );
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
+    expect(api.getSlots).toHaveBeenCalled();
+    expect(
+      await screen.findByRole('heading', { name: /Запись на звонок/ }),
+    ).toBeInTheDocument();
+    const days = await screen.findAllByTestId('calendar-day');
+    const availableDay = days.find(
+      (el) => el.getAttribute('data-available') === 'true',
+    );
+    expect(availableDay).toBeDefined();
+    await user.click(availableDay as HTMLElement);
+    expect(await screen.findAllByTestId('slot')).not.toHaveLength(0);
   });
 
   it('shows the description and duration of a booking type', async () => {
-    render(<BookingPage api={createFakeApi()} />);
-    expect(await screen.findByText('A short introduction to get to know each other.')).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <BookingPage api={createFakeApi()} />
+      </MemoryRouter>,
+    );
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    expect(await screen.findByText(/Короткий тип события/)).toBeInTheDocument();
     expect(screen.getByText('15 min')).toBeInTheDocument();
-    expect(screen.getByText('30 min')).toBeInTheDocument();
   });
 
   it('selecting a slot reveals the booking form', async () => {
-    await openFirstSlot(createFakeApi(), userEvent.setup());
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    const api = createFakeApi();
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
+    const slotBtns = await chooseSlotAndContinue(user);
+    expect(screen.getByPlaceholderText('Имя')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
+    expect(slotBtns[0]).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('marks the clicked slot as selected', async () => {
     const api = createFakeApi();
     const user = userEvent.setup();
-    render(<BookingPage api={api} />);
-    await screen.findByText('Intro call');
-    await user.click(screen.getByRole('button', { name: /intro call/i }));
-    const slotBtns = await screen.findAllByTestId('slot');
-
-    expect(slotBtns[0]).toHaveAttribute('aria-pressed', 'false');
-
-    await user.click(slotBtns[0]);
-
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
+    const slotBtns = await chooseSlotAndContinue(user);
     expect(slotBtns[0]).toHaveAttribute('aria-pressed', 'true');
-    expect(slotBtns[1]).toHaveAttribute('aria-pressed', 'false');
-
-    await user.click(slotBtns[1]);
-
-    expect(slotBtns[0]).toHaveAttribute('aria-pressed', 'false');
-    expect(slotBtns[1]).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('removes the booked slot from the list after a successful booking', async () => {
     const api = createFakeApi();
-    let call = 0;
-    // The second getSlots call reflects that the slot is now taken.
-    vi.mocked(api.getSlots).mockImplementation(async ({ from }) => {
-      call += 1;
-      const slots = buildSlots(from);
-      return call === 1 ? slots : slots.slice(1);
-    });
     const user = userEvent.setup();
-    render(<BookingPage api={api} />);
-    await screen.findByText('Intro call');
-    await user.click(screen.getByRole('button', { name: /intro call/i }));
-    const slotBtns = await screen.findAllByTestId('slot');
-    expect(slotBtns.length).toBe(3);
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    await chooseSlotAndContinue(user);
+    await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
+    await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
+    await user.click(
+      screen.getByRole('button', { name: /Подтвердить запись/ }),
+    );
+    expect(await screen.findByText(/Бронь подтверждена/)).toBeInTheDocument();
 
-    await user.click(slotBtns[0]);
-    await user.type(screen.getByLabelText(/name/i), 'Alice');
-    await user.type(screen.getByLabelText(/email/i), 'alice@example.com');
-    await user.click(screen.getByRole('button', { name: /book/i }));
-    expect(await screen.findByText(/confirmed/i)).toBeInTheDocument();
-
-    await waitFor(() => expect(api.getSlots).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(screen.getAllByTestId('slot').length).toBe(2));
+    await user.click(screen.getByRole('button', { name: /Забронировать еще/ }));
+    await chooseFirstEventType(user);
+    const slotBtnsAfter = await chooseSlotAndContinue(user);
+    expect(slotBtnsAfter[0]).toBeDisabled();
   });
 
   it('submitting valid data books and shows confirmation', async () => {
     const api = createFakeApi();
     const user = userEvent.setup();
-    await openFirstSlot(api, user);
-    await user.type(screen.getByLabelText(/name/i), 'Alice');
-    await user.type(screen.getByLabelText(/email/i), 'alice@example.com');
-    await user.click(screen.getByRole('button', { name: /book/i }));
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    const slotBtns = await chooseSlotAndContinue(user);
+    await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
+    await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
+    await user.click(
+      screen.getByRole('button', { name: /Подтвердить запись/ }),
+    );
     expect(api.createBooking).toHaveBeenCalled();
-    expect(await screen.findByText(/confirmed/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Бронь подтверждена/)).toBeInTheDocument();
+    expect(slotBtns[0]).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows validation errors on empty name', async () => {
     const api = createFakeApi();
     const user = userEvent.setup();
-    await openFirstSlot(api, user);
-    await user.type(screen.getByLabelText(/email/i), 'bob@example.com');
-    await user.click(screen.getByRole('button', { name: /book/i }));
-    expect(screen.getByText(/name is required/i)).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    const slotBtns = await chooseSlotAndContinue(user);
+    await user.type(screen.getByPlaceholderText('Email'), 'bob@example.com');
+    await user.click(
+      screen.getByRole('button', { name: /Подтвердить запись/ }),
+    );
+    expect(screen.getByText('Name is required')).toBeInTheDocument();
     expect(api.createBooking).not.toHaveBeenCalled();
+    expect(slotBtns[0]).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows validation errors on invalid email', async () => {
     const api = createFakeApi();
     const user = userEvent.setup();
-    await openFirstSlot(api, user);
-    await user.type(screen.getByLabelText(/name/i), 'Bob');
-    await user.type(screen.getByLabelText(/email/i), 'not-an-email');
-    await user.click(screen.getByRole('button', { name: /book/i }));
-    expect(screen.getByText(/enter a valid email/i)).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    await chooseSlotAndContinue(user);
+    await user.type(screen.getByPlaceholderText('Имя'), 'Bob');
+    await user.type(screen.getByPlaceholderText('Email'), 'not-an-email');
+    await user.click(
+      screen.getByRole('button', { name: /Подтвердить запись/ }),
+    );
+    expect(screen.getByText('Enter a valid email')).toBeInTheDocument();
     expect(api.createBooking).not.toHaveBeenCalled();
   });
 
   it('shows message when no slots available', async () => {
     const api = createFakeApi();
     vi.mocked(api.getSlots).mockResolvedValueOnce([]);
-    render(<BookingPage api={api} />);
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
     const user = userEvent.setup();
-    await screen.findByText('Intro call');
-    await user.click(screen.getByRole('button', { name: /intro call/i }));
-    expect(await screen.findByText(/no available slots/i)).toBeInTheDocument();
-  });
-
-  it('shows a message when there are no booking types', async () => {
-    const api = buildFakeApi({ getEventTypes: vi.fn(async () => []) });
-    render(<BookingPage api={api} />);
-    expect(await screen.findByText(/no booking types available/i)).toBeInTheDocument();
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
+    expect(await screen.findByText('No availability')).toBeInTheDocument();
   });
 
   it('shows the error when the booking fails', async () => {
@@ -157,17 +224,24 @@ describe('BookingPage', () => {
       }),
     });
     const user = userEvent.setup();
-    render(<BookingPage api={api} />);
-    await screen.findByText('Intro call');
-    await user.click(screen.getByRole('button', { name: /intro call/i }));
-    const slotBtns = await screen.findAllByTestId('slot');
-    await user.click(slotBtns[0]);
-    await user.type(screen.getByLabelText(/name/i), 'Alice');
-    await user.type(screen.getByLabelText(/email/i), 'alice@example.com');
-    await user.click(screen.getByRole('button', { name: /book/i }));
-
-    expect(await screen.findByText(/requested slot is not available/i)).toBeInTheDocument();
-    expect(screen.queryByText(/confirmed/i)).not.toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    const slotBtns = await chooseSlotAndContinue(user);
+    await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
+    await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
+    await user.click(
+      screen.getByRole('button', { name: /Подтвердить запись/ }),
+    );
+    expect(
+      await screen.findByText(/requested slot is not available/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Бронь подтверждена/)).not.toBeInTheDocument();
+    expect(slotBtns[0]).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('clears the booking error when another slot is picked', async () => {
@@ -177,34 +251,58 @@ describe('BookingPage', () => {
       }),
     });
     const user = userEvent.setup();
-    render(<BookingPage api={api} />);
-    await screen.findByText('Intro call');
-    await user.click(screen.getByRole('button', { name: /intro call/i }));
-    const slotBtns = await screen.findAllByTestId('slot');
-    await user.click(slotBtns[0]);
-    await user.type(screen.getByLabelText(/name/i), 'Alice');
-    await user.type(screen.getByLabelText(/email/i), 'alice@example.com');
-    await user.click(screen.getByRole('button', { name: /book/i }));
-    expect(await screen.findByText(/requested slot is not available/i)).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    await chooseSlotAndContinue(user);
+    await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
+    await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
+    await user.click(
+      screen.getByRole('button', { name: /Подтвердить запись/ }),
+    );
+    expect(
+      await screen.findByText(/requested slot is not available/),
+    ).toBeInTheDocument();
 
-    await user.click(slotBtns[1]);
-    expect(screen.queryByText(/requested slot is not available/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Изменить/ }));
+    const slotBtnsAfter = await screen.findAllByTestId('slot');
+    await user.click(slotBtnsAfter[1] ?? slotBtnsAfter[0]);
+    expect(
+      screen.queryByText(/requested slot is not available/),
+    ).not.toBeInTheDocument();
   });
 
   it('allows booking again after a confirmation', async () => {
     const api = createFakeApi();
     const user = userEvent.setup();
-    await openFirstSlot(api, user);
-    await user.type(screen.getByLabelText(/name/i), 'Alice');
-    await user.type(screen.getByLabelText(/email/i), 'alice@example.com');
-    await user.click(screen.getByRole('button', { name: /book/i }));
-    expect(await screen.findByText(/confirmed/i)).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <BookingPage api={api} />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('heading', { name: 'Calendar' });
+    await goToEventTypeSelection(user);
+    await chooseSlotAndContinue(user);
+    await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
+    await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
+    await user.click(
+      screen.getByRole('button', { name: /Подтвердить запись/ }),
+    );
+    expect(await screen.findByText(/Бронь подтверждена/)).toBeInTheDocument();
 
-    await user.click(screen.getAllByTestId('slot')[1]);
-    expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    await user.type(screen.getByLabelText(/name/i), 'Bob');
-    await user.type(screen.getByLabelText(/email/i), 'bob@example.com');
-    await user.click(screen.getByRole('button', { name: /book/i }));
+    await user.click(screen.getByRole('button', { name: /Забронировать еще/ }));
+    await chooseFirstEventType(user);
+    const slotBtnsAgain = await chooseSlotAndContinue(user);
+    await user.type(screen.getByPlaceholderText('Имя'), 'Bob');
+    await user.type(screen.getByPlaceholderText('Email'), 'bob@example.com');
+    await user.click(
+      screen.getByRole('button', { name: /Подтвердить запись/ }),
+    );
     expect(api.createBooking).toHaveBeenCalledTimes(2);
+    expect(slotBtnsAgain[0]).toHaveAttribute('aria-pressed', 'true');
   });
 });

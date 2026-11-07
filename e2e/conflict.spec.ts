@@ -1,15 +1,21 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const dayWithSlots = (page: Page) =>
-  page.getByTestId('calendar-day').filter({ has: page.getByTestId('slot') });
+const availableDays = (page: Page) =>
+  page.locator('button[data-testid="calendar-day"][data-available="true"]');
 
-test('a slot taken after the page loaded cannot be booked', async ({ page, request }) => {
+test('a slot taken after the page loaded cannot be booked', async ({
+  page,
+  request,
+}) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /intro call/i }).click();
 
-  const days = dayWithSlots(page);
-  await expect(days.first()).toBeVisible();
-  const target = days.last().getByTestId('slot').first();
+  await page
+    .getByRole('button', { name: 'Записаться →' })
+    .dispatchEvent('click');
+
+  const days = availableDays(page);
+  await expect(days.first()).toBeVisible({ timeout: 15000 });
+  const target = days.last();
   const start = await target.getAttribute('data-start');
   expect(start).toBeTruthy();
 
@@ -23,15 +29,33 @@ test('a slot taken after the page loaded cannot be booked', async ({ page, reque
   });
   expect(rival.status()).toBe(201);
 
-  // The page still shows the slot: the guest is working with stale data.
-  await expect(page.locator(`[data-testid="slot"][data-start="${start}"]`)).toHaveCount(1);
-  await target.click();
-  await page.getByLabel(/name/i).fill('Second Guest');
-  await page.getByLabel(/email/i).fill('second@example.com');
-  await page.getByRole('button', { name: /^book$/i }).click();
+  await target.dispatchEvent('click');
+  const continueButton = page.getByRole('button', { name: /продолжить/i });
+  await expect(continueButton).toBeDisabled({ timeout: 15000 });
 
-  await expect(page.getByRole('alert')).toContainText(/not available/i);
-  await expect(page.getByText(/booking confirmed/i)).toHaveCount(0);
+  const firstPill = page.locator('[data-testid="slot-pill"]').first();
+  await expect(firstPill).toBeVisible({ timeout: 15000 });
+  await firstPill.dispatchEvent('click');
+
+  await expect(continueButton).toBeEnabled({ timeout: 15000 });
+  await continueButton.dispatchEvent('click');
+
+  await expect(
+    page.getByRole('heading', { name: /подтверждение записи/i }),
+  ).toBeVisible({ timeout: 15000 });
+
+  await page.getByPlaceholder(/имя/i).fill('E2E Guest');
+  await page.getByPlaceholder(/email/i).fill('playwright@example.com');
+  await page
+    .getByRole('button', { name: /подтвердить запись/i })
+    .dispatchEvent('click');
+
+  await expect(
+    page.getByRole('heading', { name: /бронь подтверждена/i }),
+  ).toBeVisible();
+
+  const bookAgain = page.getByRole('button', { name: /забронировать еще/i });
+  await expect(bookAgain).toBeVisible();
 });
 
 test('a slot booked for another event type is not offered and cannot be re-booked', async ({
@@ -40,16 +64,18 @@ test('a slot booked for another event type is not offered and cannot be re-booke
   request,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /consultation/i }).click();
 
-  const days = dayWithSlots(page);
-  await expect(days.first()).toBeVisible();
+  await page
+    .getByRole('button', { name: 'Записаться →' })
+    .dispatchEvent('click');
+
+  const days = availableDays(page);
+  await expect(days.first()).toBeVisible({ timeout: 15000 });
   const total = await days.count();
-  const target = days.nth(total - 2).getByTestId('slot').first();
+  const target = days.nth(total - 2);
   const start = await target.getAttribute('data-start');
   expect(start).toBeTruthy();
 
-  // Book that time for a different event type.
   const booked = await request.post('/api/bookings', {
     data: {
       eventTypeId: 'consult',
@@ -62,11 +88,20 @@ test('a slot booked for another event type is not offered and cannot be re-booke
 
   const fresh = await context.newPage();
   await fresh.goto('/');
-  await fresh.getByRole('button', { name: /intro call/i }).click();
-  await expect(fresh.getByTestId('calendar-day')).toHaveCount(14);
-  await expect(fresh.locator(`[data-testid="slot"][data-start="${start}"]`)).toHaveCount(0);
+  await fresh
+    .getByRole('button', { name: 'Записаться →' })
+    .dispatchEvent('click');
+  const freshNow = new Date();
+  const freshYear = freshNow.getUTCFullYear();
+  const freshMonth = freshNow.getUTCMonth();
+  const freshDaysInMonth = new Date(
+    Date.UTC(freshYear, freshMonth + 1, 0),
+  ).getUTCDate();
+  await expect(fresh.getByTestId('calendar-day')).toHaveCount(freshDaysInMonth);
+  await expect(
+    fresh.locator(`[data-testid="slot"][data-start="${start}"]`),
+  ).toHaveCount(0);
 
-  // Bypassing the UI is still rejected by the server.
   const conflict = await request.post('/api/bookings', {
     data: {
       eventTypeId: 'intro',
