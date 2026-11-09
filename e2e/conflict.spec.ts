@@ -9,7 +9,7 @@ test('a slot taken after the page loaded cannot be booked', async ({
 }) => {
   await page.goto('/');
 
-  await page.getByText('Встреча 15 минут').dispatchEvent('click');
+  await page.getByRole('button', { name: /intro call/i }).click();
 
   await page
     .getByRole('button', { name: 'Записаться →' })
@@ -67,7 +67,7 @@ test('a slot booked for another event type is not offered and cannot be re-booke
 }) => {
   await page.goto('/');
 
-  await page.getByText('Встреча 15 минут').dispatchEvent('click');
+  await page.getByRole('button', { name: /intro call/i }).click();
 
   await page
     .getByRole('button', { name: 'Записаться →' })

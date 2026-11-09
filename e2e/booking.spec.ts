@@ -9,7 +9,7 @@ test('guest books a free slot and the owner sees the meeting', async ({
 
   await page.goto('/');
 
-  await page.getByText('Встреча 15 минут').dispatchEvent('click');
+  await page.getByRole('button', { name: /intro call/i }).click();
 
   const bookNow = page.getByRole('button', { name: 'Записаться →' });
   await expect(bookNow).toBeVisible({ timeout: 15000 });
