@@ -16,6 +16,7 @@ test('guest books a free slot and the owner sees the meeting', async ({
   await expect(
     page.getByRole('heading', { name: /запись на звонок/i }),
   ).toBeVisible({ timeout: 15000 });
+  await page.getByText('Встреча 15 минут').dispatchEvent('click');
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth();
