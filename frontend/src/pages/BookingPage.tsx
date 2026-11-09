@@ -385,6 +385,7 @@ export default function BookingPage({ api = defaultApiClient }: Props) {
                   {eventTypes.map((et) => (
                     <div
                       key={et.id}
+                      role="button"
                       className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm cursor-pointer hover:border-gray-200"
                       onClick={() => handleSelectEventType(et)}
                     >
