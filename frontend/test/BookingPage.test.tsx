@@ -19,6 +19,7 @@ const chooseFirstEventType = async (user: UserEvent): Promise<void> => {
 
 const chooseSlotAndContinue = async (
   user: UserEvent,
+  slotIndex = 0,
 ): Promise<HTMLElement[]> => {
   const days = await screen.findAllByTestId('calendar-day');
   const availableDay = days.find(
@@ -26,7 +27,7 @@ const chooseSlotAndContinue = async (
   );
   await user.click(availableDay as HTMLElement);
   const slotBtns = await screen.findAllByTestId('slot');
-  await user.click(slotBtns[0]);
+  await user.click(slotBtns[slotIndex]);
   await continueFromSlot(user);
   return slotBtns;
 };
@@ -127,6 +128,7 @@ describe('BookingPage', () => {
     );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
     await chooseSlotAndContinue(user);
     await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
     await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
@@ -151,6 +153,7 @@ describe('BookingPage', () => {
     );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
     const slotBtns = await chooseSlotAndContinue(user);
     await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
     await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
@@ -172,6 +175,7 @@ describe('BookingPage', () => {
     );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
     const slotBtns = await chooseSlotAndContinue(user);
     await user.type(screen.getByPlaceholderText('Email'), 'bob@example.com');
     await user.click(
@@ -192,6 +196,7 @@ describe('BookingPage', () => {
     );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
     await chooseSlotAndContinue(user);
     await user.type(screen.getByPlaceholderText('Имя'), 'Bob');
     await user.type(screen.getByPlaceholderText('Email'), 'not-an-email');
@@ -231,6 +236,7 @@ describe('BookingPage', () => {
     );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
     const slotBtns = await chooseSlotAndContinue(user);
     await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
     await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
@@ -258,6 +264,7 @@ describe('BookingPage', () => {
     );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
     await chooseSlotAndContinue(user);
     await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
     await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
@@ -286,6 +293,7 @@ describe('BookingPage', () => {
     );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
+    await chooseFirstEventType(user);
     await chooseSlotAndContinue(user);
     await user.type(screen.getByPlaceholderText('Имя'), 'Alice');
     await user.type(screen.getByPlaceholderText('Email'), 'alice@example.com');
@@ -296,13 +304,13 @@ describe('BookingPage', () => {
 
     await user.click(screen.getByRole('button', { name: /Забронировать еще/ }));
     await chooseFirstEventType(user);
-    const slotBtnsAgain = await chooseSlotAndContinue(user);
+    const slotBtnsAgain = await chooseSlotAndContinue(user, 1);
     await user.type(screen.getByPlaceholderText('Имя'), 'Bob');
     await user.type(screen.getByPlaceholderText('Email'), 'bob@example.com');
     await user.click(
       screen.getByRole('button', { name: /Подтвердить запись/ }),
     );
     expect(api.createBooking).toHaveBeenCalledTimes(2);
-    expect(slotBtnsAgain[0]).toHaveAttribute('aria-pressed', 'true');
+    expect(slotBtnsAgain[1]).toHaveAttribute('aria-pressed', 'true');
   });
 });

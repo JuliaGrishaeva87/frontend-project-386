@@ -607,6 +607,7 @@ export default function BookingPage({ api = defaultApiClient }: Props) {
                       </button>
                     </div>
                     <form
+                      noValidate
                       onSubmit={(event) => {
                         event.preventDefault();
                         void handleConfirm();
