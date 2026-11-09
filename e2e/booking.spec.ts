@@ -9,6 +9,8 @@ test('guest books a free slot and the owner sees the meeting', async ({
 
   await page.goto('/');
 
+  await page.getByText('Встреча 15 минут').dispatchEvent('click');
+
   const bookNow = page.getByRole('button', { name: 'Записаться →' });
   await expect(bookNow).toBeVisible({ timeout: 15000 });
   await bookNow.dispatchEvent('click');
@@ -16,7 +18,6 @@ test('guest books a free slot and the owner sees the meeting', async ({
   await expect(
     page.getByRole('heading', { name: /запись на звонок/i }),
   ).toBeVisible({ timeout: 15000 });
-  await page.getByText('Встреча 15 минут').dispatchEvent('click');
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth();
