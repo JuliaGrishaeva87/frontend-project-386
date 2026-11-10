@@ -27,7 +27,10 @@ const chooseSlotAndContinue = async (
   );
   await user.click(availableDay as HTMLElement);
   const slotBtns = await screen.findAllByTestId('slot');
-  await user.click(slotBtns[slotIndex]);
+  const slotBtn =
+    slotBtns.find((btn) => !(btn as HTMLButtonElement).disabled) ??
+    slotBtns[slotIndex];
+  await user.click(slotBtn);
   await continueFromSlot(user);
   return slotBtns;
 };
@@ -304,13 +307,16 @@ describe('BookingPage', () => {
 
     await user.click(screen.getByRole('button', { name: /Забронировать еще/ }));
     await chooseFirstEventType(user);
-    const slotBtnsAgain = await chooseSlotAndContinue(user, 1);
+    const slotBtnsAgain = await chooseSlotAndContinue(user, 0);
     await user.type(screen.getByPlaceholderText('Имя'), 'Bob');
     await user.type(screen.getByPlaceholderText('Email'), 'bob@example.com');
     await user.click(
       screen.getByRole('button', { name: /Подтвердить запись/ }),
     );
     expect(api.createBooking).toHaveBeenCalledTimes(2);
-    expect(slotBtnsAgain[1]).toHaveAttribute('aria-pressed', 'true');
+    const selectedSlotBtn = slotBtnsAgain.find(
+      (btn) => btn.getAttribute('aria-pressed') === 'true',
+    );
+    expect(selectedSlotBtn).toHaveAttribute('aria-pressed', 'true');
   });
 });
