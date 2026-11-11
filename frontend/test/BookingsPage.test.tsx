@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import HostBookingsPage from '../src/pages/HostBookingsPage';
+import { BookingFlowProvider } from '../src/context/BookingContext';
+import BookingsPage from '../src/pages/BookingsPage';
 import type { Booking } from '../src/api/types';
 import { buildFakeApi } from './helpers/fakeApi';
 
@@ -31,7 +32,7 @@ const bookings: Booking[] = [
   },
 ];
 
-describe('HostBookingsPage', () => {
+describe('BookingsPage', () => {
   it('lists upcoming meetings with guest details', async () => {
     const api = buildFakeApi({
       getBookings: vi.fn(async () => bookings),
@@ -52,7 +53,9 @@ describe('HostBookingsPage', () => {
     });
     render(
       <MemoryRouter>
-        <HostBookingsPage api={api} />
+        <BookingFlowProvider>
+          <BookingsPage api={api} />
+        </BookingFlowProvider>
       </MemoryRouter>,
     );
 
@@ -77,7 +80,9 @@ describe('HostBookingsPage', () => {
     });
     render(
       <MemoryRouter>
-        <HostBookingsPage api={api} />
+        <BookingFlowProvider>
+          <BookingsPage api={api} />
+        </BookingFlowProvider>
       </MemoryRouter>,
     );
 
@@ -90,7 +95,9 @@ describe('HostBookingsPage', () => {
   it('shows an empty state when nothing is booked', async () => {
     render(
       <MemoryRouter>
-        <HostBookingsPage api={buildFakeApi()} />
+        <BookingFlowProvider>
+          <BookingsPage api={buildFakeApi()} />
+        </BookingFlowProvider>
       </MemoryRouter>,
     );
     expect(

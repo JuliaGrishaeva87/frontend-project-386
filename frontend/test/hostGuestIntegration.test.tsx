@@ -17,12 +17,12 @@ describe('host to guest integration', () => {
   it('availability saved by the Host shapes the slots the guest sees', async () => {
     await mockApiClient.putAvailability(lateAfternoon);
     const { unmount } = render(
-      <MemoryRouter initialEntries={['/host/availability']}>
+      <MemoryRouter initialEntries={['/']}>
         <AppRoutes />
       </MemoryRouter>,
     );
     expect(
-      await screen.findByRole('heading', { name: 'Availability' }),
+      await screen.findByRole('heading', { name: 'Calendar' }),
     ).toBeInTheDocument();
     unmount();
 

@@ -9,11 +9,13 @@ test('a slot taken after the page loaded cannot be booked', async ({
 }) => {
   await page.goto('/');
 
-  await page.getByRole('button', { name: /15 minutes/i }).click();
-
   await page
     .getByRole('button', { name: 'Записаться →' })
     .dispatchEvent('click');
+  await expect(page).toHaveURL(/\/event-types/);
+
+  await page.getByText(/15/).first().click();
+  await expect(page).toHaveURL(/\/availability/);
 
   const days = availableDays(page);
   await expect(days.first()).toBeVisible({ timeout: 15000 });
@@ -35,7 +37,7 @@ test('a slot taken after the page loaded cannot be booked', async ({
   const continueButton = page.getByRole('button', { name: /продолжить/i });
   await expect(continueButton).toBeDisabled({ timeout: 15000 });
 
-  const firstPill = page.locator('[data-testid="slot-pill"]').first();
+  const firstPill = page.locator('button[data-testid="slot"]').first();
   await expect(firstPill).toBeVisible({ timeout: 15000 });
   await firstPill.dispatchEvent('click');
 
@@ -45,6 +47,7 @@ test('a slot taken after the page loaded cannot be booked', async ({
   await expect(
     page.getByRole('heading', { name: /подтверждение записи/i }),
   ).toBeVisible({ timeout: 15000 });
+  await expect(page).toHaveURL(/\/confirm/);
 
   await page.getByPlaceholder(/имя/i).fill('E2E Guest');
   await page.getByPlaceholder(/email/i).fill('playwright@example.com');
@@ -55,9 +58,7 @@ test('a slot taken after the page loaded cannot be booked', async ({
   await expect(
     page.getByRole('heading', { name: /бронь подтверждена/i }),
   ).toBeVisible();
-
-  const bookAgain = page.getByRole('button', { name: /забронировать еще/i });
-  await expect(bookAgain).toBeVisible();
+  await expect(page).toHaveURL(/\/confirmed/);
 });
 
 test('a slot booked for another event type is not offered and cannot be re-booked', async ({
@@ -67,11 +68,13 @@ test('a slot booked for another event type is not offered and cannot be re-booke
 }) => {
   await page.goto('/');
 
-  await page.getByRole('button', { name: /15 minutes/i }).click();
-
   await page
     .getByRole('button', { name: 'Записаться →' })
     .dispatchEvent('click');
+  await expect(page).toHaveURL(/\/event-types/);
+
+  await page.getByText(/15/).first().click();
+  await expect(page).toHaveURL(/\/availability/);
 
   const days = availableDays(page);
   await expect(days.first()).toBeVisible({ timeout: 15000 });
@@ -95,6 +98,7 @@ test('a slot booked for another event type is not offered and cannot be re-booke
   await fresh
     .getByRole('button', { name: 'Записаться →' })
     .dispatchEvent('click');
+  await expect(fresh).toHaveURL(/\/event-types/);
   const freshNow = new Date();
   const freshYear = freshNow.getUTCFullYear();
   const freshMonth = freshNow.getUTCMonth();

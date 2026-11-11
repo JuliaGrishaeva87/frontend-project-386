@@ -2,11 +2,29 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import BookingPage from '../src/pages/BookingPage';
+import { BookingFlowProvider } from '../src/context/BookingContext';
+import LandingPage from '../src/pages/LandingPage';
+import EventSelectionPage from '../src/pages/EventSelectionPage';
+import AvailabilityPage from '../src/pages/AvailabilityPage';
+import BookingFormPage from '../src/pages/BookingFormPage';
+import BookingConfirmedPage from '../src/pages/BookingConfirmedPage';
 import type { ApiClient } from '../src/api/types';
 import { buildFakeApi } from './helpers/fakeApi';
 
 const createFakeApi = (): ApiClient => buildFakeApi();
+
+const renderBookingFlow = (api: ApiClient) =>
+  render(
+    <MemoryRouter>
+      <BookingFlowProvider api={api}>
+        <LandingPage />
+        <EventSelectionPage />
+        <AvailabilityPage />
+        <BookingFormPage />
+        <BookingConfirmedPage />
+      </BookingFlowProvider>
+    </MemoryRouter>,
+  );
 
 const goToEventTypeSelection = async (user: UserEvent): Promise<void> => {
   await user.click(screen.getByRole('button', { name: /Записаться/ }));
@@ -20,32 +38,34 @@ const chooseFirstEventType = async (user: UserEvent): Promise<void> => {
 const chooseSlotAndContinue = async (
   user: UserEvent,
   slotIndex = 0,
+  preferFree = false,
 ): Promise<HTMLElement[]> => {
   const days = await screen.findAllByTestId('calendar-day');
-  const availableDay = days.find(
+  const availableDays = days.filter(
     (el) => el.getAttribute('data-available') === 'true',
   );
-  await user.click(availableDay as HTMLElement);
-  const slotBtns = await screen.findAllByTestId('slot');
+  const daysToVisit = preferFree ? availableDays : [availableDays[0]];
+  let slotBtns: HTMLElement[] = [];
+  for (const day of daysToVisit) {
+    await user.click(day as HTMLElement);
+    const btns = await screen.findAllByTestId('slot');
+    const free = btns.find((btn) => !(btn as HTMLButtonElement).disabled);
+    if (preferFree ? !!free : true) {
+      slotBtns = btns;
+      break;
+    }
+  }
   const slotBtn =
     slotBtns.find((btn) => !(btn as HTMLButtonElement).disabled) ??
     slotBtns[slotIndex];
   await user.click(slotBtn);
-  await continueFromSlot(user);
+  await user.click(screen.getByRole('button', { name: /Продолжить/ }));
   return slotBtns;
 };
 
-const continueFromSlot = async (user: UserEvent) => {
-  await user.click(screen.getByRole('button', { name: /Продолжить/ }));
-};
-
-describe('BookingPage', () => {
+describe('BookingFlow', () => {
   it('renders the landing screen', async () => {
-    render(
-      <MemoryRouter>
-        <BookingPage api={createFakeApi()} />
-      </MemoryRouter>,
-    );
+    renderBookingFlow(createFakeApi());
     expect(
       await screen.findByRole('heading', { name: 'Calendar' }),
     ).toBeInTheDocument();
@@ -54,11 +74,7 @@ describe('BookingPage', () => {
 
   it('selecting event type opens a calendar with free slots', async () => {
     const api = createFakeApi();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
+    renderBookingFlow(api);
     const user = userEvent.setup();
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
@@ -77,11 +93,7 @@ describe('BookingPage', () => {
   });
 
   it('shows the description and duration of a booking type', async () => {
-    render(
-      <MemoryRouter>
-        <BookingPage api={createFakeApi()} />
-      </MemoryRouter>,
-    );
+    renderBookingFlow(createFakeApi());
     const user = userEvent.setup();
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
@@ -91,12 +103,8 @@ describe('BookingPage', () => {
 
   it('selecting a slot reveals the booking form', async () => {
     const api = createFakeApi();
+    renderBookingFlow(api);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -108,12 +116,8 @@ describe('BookingPage', () => {
 
   it('marks the clicked slot as selected', async () => {
     const api = createFakeApi();
+    renderBookingFlow(api);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -122,13 +126,8 @@ describe('BookingPage', () => {
   });
 
   it('removes the booked slot from the list after a successful booking', async () => {
-    const api = createFakeApi();
+    renderBookingFlow(createFakeApi());
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -148,12 +147,8 @@ describe('BookingPage', () => {
 
   it('submitting valid data books and shows confirmation', async () => {
     const api = createFakeApi();
+    renderBookingFlow(api);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -170,12 +165,8 @@ describe('BookingPage', () => {
 
   it('shows validation errors on empty name', async () => {
     const api = createFakeApi();
+    renderBookingFlow(api);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -191,12 +182,8 @@ describe('BookingPage', () => {
 
   it('shows validation errors on invalid email', async () => {
     const api = createFakeApi();
+    renderBookingFlow(api);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -213,11 +200,7 @@ describe('BookingPage', () => {
   it('shows message when no slots available', async () => {
     const api = createFakeApi();
     vi.mocked(api.getSlots).mockResolvedValueOnce([]);
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
+    renderBookingFlow(api);
     const user = userEvent.setup();
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
@@ -231,12 +214,8 @@ describe('BookingPage', () => {
         throw new Error('requested slot is not available');
       }),
     });
+    renderBookingFlow(api);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -259,12 +238,8 @@ describe('BookingPage', () => {
         throw new Error('requested slot is not available');
       }),
     });
+    renderBookingFlow(api);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -288,12 +263,8 @@ describe('BookingPage', () => {
 
   it('allows booking again after a confirmation', async () => {
     const api = createFakeApi();
+    renderBookingFlow(api);
     const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <BookingPage api={api} />
-      </MemoryRouter>,
-    );
     await screen.findByRole('heading', { name: 'Calendar' });
     await goToEventTypeSelection(user);
     await chooseFirstEventType(user);
@@ -307,7 +278,7 @@ describe('BookingPage', () => {
 
     await user.click(screen.getByRole('button', { name: /Забронировать еще/ }));
     await chooseFirstEventType(user);
-    const slotBtnsAgain = await chooseSlotAndContinue(user, 0);
+    const slotBtnsAgain = await chooseSlotAndContinue(user, 0, true);
     await user.type(screen.getByPlaceholderText('Имя'), 'Bob');
     await user.type(screen.getByPlaceholderText('Email'), 'bob@example.com');
     await user.click(

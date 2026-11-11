@@ -9,11 +9,14 @@ test('guest books a free slot and the owner sees the meeting', async ({
 
   await page.goto('/');
 
-  await page.getByRole('button', { name: /15 minutes/i }).click();
-
   const bookNow = page.getByRole('button', { name: 'Записаться →' });
   await expect(bookNow).toBeVisible({ timeout: 15000 });
   await bookNow.dispatchEvent('click');
+
+  await expect(page).toHaveURL(/\/event-types/);
+
+  await page.getByText(/15/).first().click();
+  await expect(page).toHaveURL(/\/availability/);
 
   await expect(
     page.getByRole('heading', { name: /запись на звонок/i }),
@@ -46,6 +49,7 @@ test('guest books a free slot and the owner sees the meeting', async ({
   await expect(
     page.getByRole('heading', { name: /подтверждение записи/i }),
   ).toBeVisible({ timeout: 15000 });
+  await expect(page).toHaveURL(/\/confirm/);
 
   await page.getByPlaceholder(/имя/i).fill(guestName);
   await page.getByPlaceholder(/email/i).fill(guestEmail);
@@ -56,17 +60,18 @@ test('guest books a free slot and the owner sees the meeting', async ({
   await expect(
     page.getByRole('heading', { name: /бронь подтверждена/i }),
   ).toBeVisible();
+  await expect(page).toHaveURL(/\/confirmed/);
 
   const bookAgain = page.getByRole('button', { name: /забронировать еще/i });
   await expect(bookAgain).toBeVisible();
 
   const host = await context.newPage();
-  await host.goto('/host/bookings');
+  await host.goto('/bookings');
   await expect(
-    host.getByRole('heading', { name: /upcoming meetings/i }),
+    host.getByRole('heading', { name: /предстоящие события/i }),
   ).toBeVisible();
 
-  const meeting = host.locator('li').filter({ hasText: guestName });
+  const meeting = host.locator('div').filter({ hasText: guestName }).first();
   await expect(meeting).toBeVisible();
   await expect(meeting).toContainText(guestEmail);
   await expect(meeting).toContainText(/intro call/i);

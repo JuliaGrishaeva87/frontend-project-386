@@ -18,29 +18,8 @@ describe('routes', () => {
     ).toBeInTheDocument();
   });
 
-  it('redirects /host to /host/availability', async () => {
-    renderAt('/host');
-    expect(
-      await screen.findByRole('heading', { name: 'Availability' }),
-    ).toBeInTheDocument();
-  });
-
-  it('renders the availability editor at /host/availability', async () => {
-    renderAt('/host/availability');
-    expect(
-      await screen.findByRole('heading', { name: 'Availability' }),
-    ).toBeInTheDocument();
-  });
-
-  it('renders event types at /host/event-types', async () => {
-    renderAt('/host/event-types');
-    expect(
-      await screen.findByRole('heading', { name: 'Event types' }),
-    ).toBeInTheDocument();
-  });
-
-  it('renders upcoming meetings at /host/bookings', async () => {
-    renderAt('/host/bookings');
+  it('renders upcoming meetings at /bookings', async () => {
+    renderAt('/bookings');
     expect(
       await screen.findByRole('heading', { name: 'Предстоящие события' }),
     ).toBeInTheDocument();
