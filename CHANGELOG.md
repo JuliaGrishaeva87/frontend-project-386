@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/JuliaGrishaeva87/frontend-project-386/compare/v1.1.0...v1.1.1) (2026-11-12)
+
+
+### Bug Fixes
+
+* choose free slot and wait for continue in re-booking test ([4910e67](https://github.com/JuliaGrishaeva87/frontend-project-386/commit/4910e6752c30244381642da6e568d7263b403456))
+
 ## [1.1.0](https://github.com/JuliaGrishaeva87/frontend-project-386/compare/v1.0.0...v1.1.0) (2026-11-12)
 
 
