@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { BookingFlowProvider } from '../src/context/BookingContext';
@@ -59,7 +59,12 @@ const chooseSlotAndContinue = async (
     slotBtns.find((btn) => !(btn as HTMLButtonElement).disabled) ??
     slotBtns[slotIndex];
   await user.click(slotBtn);
-  await user.click(screen.getByRole('button', { name: /Продолжить/ }));
+  const continueBtn = screen.getByRole('button', { name: /Продолжить/ });
+  await waitFor(() => {
+    expect(continueBtn).toBeEnabled();
+    return continueBtn;
+  });
+  await user.click(continueBtn);
   return slotBtns;
 };
 
@@ -278,9 +283,12 @@ describe('BookingFlow', () => {
 
     await user.click(screen.getByRole('button', { name: /Забронировать еще/ }));
     await chooseFirstEventType(user);
-    const slotBtnsAgain = await chooseSlotAndContinue(user, 0, true);
-    await user.type(screen.getByPlaceholderText('Имя'), 'Bob');
-    await user.type(screen.getByPlaceholderText('Email'), 'bob@example.com');
+    const slotBtnsAgain = await chooseSlotAndContinue(user, 1, true);
+    await screen.findByText(/Подтверждение записи/);
+    const nome = await screen.findByPlaceholderText('Имя');
+    const email = await screen.findByPlaceholderText('Email');
+    await user.type(nome, 'Bob');
+    await user.type(email, 'bob@example.com');
     await user.click(
       screen.getByRole('button', { name: /Подтвердить запись/ }),
     );

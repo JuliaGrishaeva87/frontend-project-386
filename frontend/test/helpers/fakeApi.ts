@@ -19,7 +19,7 @@ export const someEventTypes: EventType[] = [
 
 // Slots are derived from the requested window, like the real API does: two slots on
 // the first day of the window, one on the second, none after that.
-const HOURS_BY_DAY: number[][] = [[9, 10], [9], []];
+const HOURS_BY_DAY: number[][] = [[9, 10], [9, 10], []];
 
 export const buildSlots = (from: string): Slot[] => {
   const startMs = Date.parse(from);
