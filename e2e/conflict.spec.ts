@@ -55,10 +55,8 @@ test('a slot taken after the page loaded cannot be booked', async ({
     .getByRole('button', { name: /подтвердить запись/i })
     .dispatchEvent('click');
 
-  await expect(
-    page.getByRole('heading', { name: /бронь подтверждена/i }),
-  ).toBeVisible();
-  await expect(page).toHaveURL(/\/confirmed/);
+  await expect(page.getByText(/requested slot is not available/i)).toBeVisible();
+  await expect(page).toHaveURL(/\/confirm$/);
 });
 
 test('a slot booked for another event type is not offered and cannot be re-booked', async ({
@@ -99,6 +97,8 @@ test('a slot booked for another event type is not offered and cannot be re-booke
     .getByRole('button', { name: 'Записаться →' })
     .dispatchEvent('click');
   await expect(fresh).toHaveURL(/\/event-types/);
+  await fresh.getByText(/15/).first().click();
+  await expect(fresh).toHaveURL(/\/availability/);
   const freshNow = new Date();
   const freshYear = freshNow.getUTCFullYear();
   const freshMonth = freshNow.getUTCMonth();
