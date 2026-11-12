@@ -68,7 +68,7 @@ export default function BookingsPage({ api = defaultApiClient }: Props) {
             <p className="text-sm text-gray-600">No upcoming meetings yet.</p>
           )}
           <div className="flex flex-col gap-4">
-            {meetings.map(({ booking }) => (
+            {meetings.map(({ booking, eventType }) => (
               <div
                 key={booking.id}
                 className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6"
@@ -78,6 +78,9 @@ export default function BookingsPage({ api = defaultApiClient }: Props) {
                 </p>
                 <p className="text-sm text-gray-400 font-medium mb-3">
                   {booking.guestEmail}
+                </p>
+                <p className="text-sm text-gray-500 font-medium mb-1">
+                  {eventType?.name ?? 'Встреча'}
                 </p>
                 <p className="text-sm text-gray-500 font-medium mb-1">
                   Слот: {booking.start.slice(0, 10)}-{booking.start.slice(11, 16)}

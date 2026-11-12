@@ -37,7 +37,7 @@ test('a slot taken after the page loaded cannot be booked', async ({
   const continueButton = page.getByRole('button', { name: /продолжить/i });
   await expect(continueButton).toBeDisabled({ timeout: 15000 });
 
-  const firstPill = page.locator('button[data-testid="slot"]').first();
+  const firstPill = page.locator('button[data-testid="slot"]:not([disabled])').first();
   await expect(firstPill).toBeVisible({ timeout: 15000 });
   await firstPill.dispatchEvent('click');
 
